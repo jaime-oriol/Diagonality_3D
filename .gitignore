@@ -1,0 +1,40 @@
+# Project instructions (confidential)
+CLAUDE.md
+
+# Data (heavy, confidential, git-ignored)
+data/
+
+# Cache
+cache/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+*.so
+
+# Jupyter
+.ipynb_checkpoints/
+catboost_info/
+
+# Environment
+.env
+*.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models and outputs
+*.pkl
+*.joblib
+models/
+outputs/
