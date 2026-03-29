@@ -1,7 +1,7 @@
-# Project instructions (confidential)
-CLAUDE.md
+# Docs (confidential research)
+docs/
 
-# Data (heavy, confidential, git-ignored)
+# Data (heavy, confidential)
 data/
 
 # Cache
