@@ -1,7 +1,10 @@
-# Docs (confidential research)
+# Docs (research, not tracked in hackathon repo)
 docs/
 
-# Data (heavy, confidential)
+# External references
+references/
+
+# Data (hackathon data ~20GB, DO NOT UPLOAD per hackathon rules)
 data/
 
 # Cache
@@ -38,3 +41,6 @@ Thumbs.db
 *.joblib
 models/
 outputs/
+
+# Figures (tracked selectively)
+figures/*.mp4
