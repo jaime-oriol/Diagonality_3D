@@ -13,7 +13,7 @@ TF15 doc says "cm" but actual parquet values are METERS.
 import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -442,17 +442,13 @@ def load_receptions(match: str) -> pd.DataFrame:
 
 
 def load_shots(match: str) -> pd.DataFrame:
-    """Load all shot events from kpi_data XML (ShotAtGoal in Events XML)."""
+    """Load all shot events from Events XML."""
     tree = ET.parse(MATCH_DIR / match / f"Events_{match}.xml")
     root = tree.getroot()
 
     rows = []
     for shot in root.iter("ShotAtGoal"):
-        event = shot.getparent() if hasattr(shot, "getparent") else None
-        # Get the parent Event element
         event_id = shot.get("EventId", "")
-
-        # Check for goal (SuccessfulShot child)
         is_goal = shot.find("SuccessfulShot") is not None
 
         rows.append({

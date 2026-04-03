@@ -55,10 +55,6 @@ def _perp_angle(lx, ly, rx, ry):
     return np.arctan2(dx, -dy)
 
 
-def _vec_angle(x0, y0, x1, y1):
-    """Angle of vector from (x0,y0) to (x1,y1)."""
-    return np.arctan2(y1 - y0, x1 - x0)
-
 
 # --- Pivot skeleton to wide format ----------------------------------------
 
@@ -160,6 +156,7 @@ def compute_orientations(skeleton: pd.DataFrame, smooth: bool = True) -> pd.Data
     ).values
 
     # --- Neck height (posture indicator) ---
+    # .values strips MultiIndex column metadata from pivot; needed for flat assignment
     wide["neck_z"] = wide["neck_z"].values
 
     # --- Torso lean: angle of neck-pelvis vector relative to vertical ---
@@ -188,7 +185,9 @@ def compute_orientations(skeleton: pd.DataFrame, smooth: bool = True) -> pd.Data
         angle_cols = ["head_angle", "head_angle_perp", "shoulder_angle", "hip_angle"]
         scalar_cols = ["x", "y", "torso_lean", "stance_width"]
 
-        for _, grp in result.groupby(["team", "jersey"]):
+        # Sort by frame within each player to ensure temporal order for smoothing
+        result = result.sort_values(["team", "jersey", "frame_number"])
+        for _, grp in result.groupby(["team", "jersey"], sort=False):
             idx = grp.index
             if len(idx) < 7:
                 continue

@@ -61,8 +61,12 @@ def _assign_lines(x_coords: np.ndarray, k: int = 3) -> np.ndarray:
     """Assign defenders to lines via K-Means on longitudinal coordinate.
 
     Returns labels sorted so 0=deepest (most negative x), 2=highest.
+    Handles degenerate cases (all players at same x).
     """
     if len(x_coords) < k:
+        return np.zeros(len(x_coords), dtype=int)
+    # Degenerate: all players at nearly the same x
+    if np.ptp(x_coords) < 0.5:
         return np.zeros(len(x_coords), dtype=int)
     km = KMeans(n_clusters=k, n_init=10, random_state=42)
     labels = km.fit_predict(x_coords.reshape(-1, 1))
@@ -399,13 +403,12 @@ def _empty_ddef(windows):
 def ddef_summary_by_direction(df: pd.DataFrame, window: str = "3s") -> pd.DataFrame:
     """Summarize D-Def by pass direction."""
     valid = df[df[f"ddef_{window}"].notna() & (df["direction"] != "unknown")]
-    return valid.groupby("direction").agg(
+    stats = valid.groupby("direction").agg(
         count=(f"ddef_{window}", "size"),
         mean_ddef=(f"ddef_{window}", "mean"),
         median_ddef=(f"ddef_{window}", "median"),
         mean_pc1_abs=(f"pc1_{window}", lambda x: x.abs().mean()),
         mean_pc2_abs=(f"pc2_{window}", lambda x: x.abs().mean()),
-        pc1_pc2_ratio=(f"pc1_{window}", lambda x: min(x.abs().mean(), df.loc[x.index, f"pc2_{window}"].abs().mean()) / max(x.abs().mean(), df.loc[x.index, f"pc2_{window}"].abs().mean()) if x.abs().mean() > 0 else 0),
         mean_delta_spread_long=(f"delta_spread_long_{window}", "mean"),
         mean_delta_spread_lat=(f"delta_spread_lat_{window}", "mean"),
         mean_delta_dist_def_mid=(f"delta_dist_def_mid_{window}", "mean"),
@@ -413,3 +416,11 @@ def ddef_summary_by_direction(df: pd.DataFrame, window: str = "3s") -> pd.DataFr
         mean_local_delta_area=("local_delta_area", "mean"),
         mean_local_delta_spread=("local_delta_spread", "mean"),
     ).reset_index()
+
+    # PC1/PC2 balance ratio (computed separately to avoid fragile lambda)
+    pc1 = stats["mean_pc1_abs"]
+    pc2 = stats["mean_pc2_abs"]
+    max_pc = np.maximum(pc1, pc2).replace(0, np.nan)
+    stats["pc1_pc2_ratio"] = np.minimum(pc1, pc2) / max_pc
+
+    return stats

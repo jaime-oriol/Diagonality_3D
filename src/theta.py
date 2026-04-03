@@ -46,10 +46,10 @@ def classify_direction(play_angle: pd.Series) -> pd.Series:
     """
     abs_angle = play_angle.abs()
     result = pd.Series("unknown", index=play_angle.index)
-    result[abs_angle <= 22] = "forward"
-    result[(abs_angle >= 23) & (abs_angle <= 67)] = "diagonal"
-    result[(abs_angle >= 68) & (abs_angle <= 112)] = "sideways"
-    result[abs_angle > 112] = "backward"
+    result[abs_angle <= 22.5] = "forward"
+    result[(abs_angle > 22.5) & (abs_angle <= 67.5)] = "diagonal"
+    result[(abs_angle > 67.5) & (abs_angle <= 112.5)] = "sideways"
+    result[abs_angle > 112.5] = "backward"
     result[play_angle.isna()] = "unknown"
     return result
 
@@ -96,6 +96,9 @@ def compute_pass_theta(
     defending_team = 1 - attacking_team
     defenders = frame_ori[frame_ori["team"] == defending_team]
     attackers = frame_ori[frame_ori["team"] == attacking_team]
+
+    if len(defenders) == 0:
+        return _empty_result(event)
 
     px, py = event.get("x"), event.get("y")
     rx, ry = event.get("x_receiver"), event.get("y_receiver")
@@ -489,6 +492,7 @@ def _empty_result(event):
         "x_receiver": event.get("x_receiver"),
         "y_receiver": event.get("y_receiver"),
         "direction": "unknown",
+        "carry_length": np.nan,
         "nearest_theta_head": np.nan, "nearest_theta_shoulder": np.nan,
         "nearest_theta_hip": np.nan, "nearest_in_blind": np.nan,
         "mean_theta_head_all": np.nan, "mean_theta_shoulder_all": np.nan,

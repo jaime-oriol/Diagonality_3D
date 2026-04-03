@@ -27,10 +27,10 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 from .loader import (
-    MATCHES, MATCH_DIR, PART_NAMES, ORIENTATION_PARTS,
+    MATCHES, MATCH_DIR,
     TEAM_HOME, TEAM_AWAY,
     load_metadata, load_passes, load_carries, load_receptions,
-    synced_frame_to_parquet, _safe_float, _safe_int, _kpi_path,
+    synced_frame_to_parquet, _safe_float, _kpi_path,
 )
 import xml.etree.ElementTree as ET
 
@@ -438,8 +438,8 @@ def preprocess_match(match: str, verbose: bool = True) -> Path:
     if verbose:
         print(f"\n[{match}] Validating cache...")
 
-    # Quick check: read first 1000 rows from skeleton cache
-    sample = pd.read_parquet(skel_path).head(1000)
+    # Quick check: read first row group only (avoids loading full file)
+    sample = pq.ParquetFile(skel_path).read_row_group(0).to_pandas()
     sample_frame = sample["frame_number"].iloc[0]
     n_in_frame = sample[sample["frame_number"] == sample_frame].groupby(["team", "jersey"]).ngroups
     parts_in_frame = sample[sample["frame_number"] == sample_frame]["part_id"].nunique()
@@ -484,9 +484,19 @@ def load_cached_possessions(match: str) -> pd.DataFrame:
     return pd.read_parquet(CACHE_DIR / match / "possessions.parquet")
 
 def load_cached_metadata(match: str) -> dict:
-    """Load preprocessed metadata from cache. Instant."""
+    """Load preprocessed metadata from cache. Instant.
+
+    Converts JSON string keys back to int for phases and home_gk_left
+    so the result is compatible with synced_frame_to_parquet().
+    """
     with open(CACHE_DIR / match / "metadata.json") as f:
-        return json.load(f)
+        data = json.load(f)
+    # JSON serializes dict keys as strings; convert back to int
+    if "phases" in data:
+        data["phases"] = {int(k): v for k, v in data["phases"].items()}
+    if "home_gk_left" in data:
+        data["home_gk_left"] = {int(k): v for k, v in data["home_gk_left"].items()}
+    return data
 
 def is_cached(match: str) -> bool:
     """Check if a match has been preprocessed."""
