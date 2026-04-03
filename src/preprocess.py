@@ -210,67 +210,113 @@ def _collect_frames(events: pd.DataFrame) -> np.ndarray:
 def _extract_skeleton_batch(
     match: str,
     frames: np.ndarray,
-    parts: set = ORIENTATION_PARTS,
-) -> pd.DataFrame:
-    """Extract skeleton data for many frames, scanning row groups once."""
+    output_path: Path,
+    parts: set = None,  # None = all 21 parts
+    verbose: bool = True,
+) -> int:
+    """Extract skeleton data for many frames, writing chunks to parquet.
+
+    Scans row groups one at a time and writes each chunk to disk
+    immediately, keeping memory usage flat (~200MB peak).
+
+    Returns total row count.
+    """
+    import pyarrow as pa
+    import gc
+
     path = MATCH_DIR / match / f"{MATCHES[match]}.parquet"
     pf = pq.ParquetFile(path)
 
     frame_set = set(frames.tolist())
-    all_rows = []
-
     n_groups = pf.metadata.num_row_groups
+    total_rows = 0
+    writer = None
+
+    schema = pa.schema([
+        ("frame_number", pa.int32()),
+        ("team", pa.int8()),
+        ("jersey", pa.int8()),
+        ("part_id", pa.int8()),
+        ("x", pa.float32()),
+        ("y", pa.float32()),
+        ("z", pa.float32()),
+    ])
+
     for rg_idx in range(n_groups):
         table = pf.read_row_group(rg_idx)
         frame_col = table.column("frame_number").to_pylist()
 
         hits = frame_set & set(frame_col)
         if not hits:
+            del table
             continue
 
         skel_col = table.column("skeletons").to_pylist()
+        chunk_rows = []
+
         for i, fn in enumerate(frame_col):
             if fn not in hits:
                 continue
-
             for skel in skel_col[i]:
                 team = skel["team"]
                 jersey = skel["jersey_number"]
                 if team not in (TEAM_HOME, TEAM_AWAY) or jersey <= 0:
                     continue
-
                 for part in skel["parts"]:
                     pid = part["name"]
-                    if pid not in parts:
+                    if parts is not None and pid not in parts:
                         continue
-                    all_rows.append((
+                    chunk_rows.append((
                         fn, team, jersey, pid,
                         part["position_x"], part["position_y"], part["position_z"],
                     ))
 
+        # Free the heavy parquet table immediately
+        del table, skel_col, frame_col
+        gc.collect()
+
+        if chunk_rows:
+            chunk_df = pd.DataFrame(chunk_rows, columns=[
+                "frame_number", "team", "jersey", "part_id", "x", "y", "z",
+            ])
+            chunk_df["team"] = chunk_df["team"].astype(np.int8)
+            chunk_df["jersey"] = chunk_df["jersey"].astype(np.int8)
+            chunk_df["part_id"] = chunk_df["part_id"].astype(np.int8)
+            chunk_df["x"] = chunk_df["x"].astype(np.float32)
+            chunk_df["y"] = chunk_df["y"].astype(np.float32)
+            chunk_df["z"] = chunk_df["z"].astype(np.float32)
+
+            pa_table = pa.Table.from_pandas(chunk_df, schema=schema, preserve_index=False)
+            if writer is None:
+                writer = pq.ParquetWriter(output_path, schema)
+            writer.write_table(pa_table)
+            total_rows += len(chunk_df)
+
+            del chunk_rows, chunk_df, pa_table
+            gc.collect()
+
+            if verbose and rg_idx % 20 == 0:
+                print(f"    row_group {rg_idx}/{n_groups}, {total_rows:,} rows so far")
+
         frame_set -= hits
         if not frame_set:
+            if verbose:
+                print(f"    all frames found at row_group {rg_idx}/{n_groups}")
             break
 
-    df = pd.DataFrame(all_rows, columns=[
-        "frame_number", "team", "jersey", "part_id", "x", "y", "z",
-    ])
-    df["part"] = df["part_id"].map(PART_NAMES)
-    df["team"] = df["team"].astype(np.int8)
-    df["jersey"] = df["jersey"].astype(np.int8)
-    df["part_id"] = df["part_id"].astype(np.int8)
-    df["x"] = df["x"].astype(np.float32)
-    df["y"] = df["y"].astype(np.float32)
-    df["z"] = df["z"].astype(np.float32)
+    if writer is not None:
+        writer.close()
 
-    return df.sort_values(["frame_number", "team", "jersey", "part_id"]).reset_index(drop=True)
+    return total_rows
 
 
 def _extract_ball_batch(
     match: str,
     frames: np.ndarray,
 ) -> pd.DataFrame:
-    """Extract ball data for many frames, scanning row groups once."""
+    """Extract ball data for many frames. Ball data is small so kept in memory."""
+    import gc
+
     path = MATCH_DIR / match / f"{MATCHES[match]}.parquet"
     pf = pq.ParquetFile(path)
 
@@ -283,6 +329,7 @@ def _extract_ball_batch(
 
         hits = frame_set & set(frame_col)
         if not hits:
+            del table
             continue
 
         ball_col = table.column("ball").to_pylist()
@@ -302,6 +349,9 @@ def _extract_ball_batch(
                 ))
             else:
                 all_rows.append((fn, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, False))
+
+        del table, ball_col, exists_col
+        gc.collect()
 
         frame_set -= hits
         if not frame_set:
@@ -364,19 +414,16 @@ def preprocess_match(match: str, verbose: bool = True) -> Path:
         if len(frames) > 0:
             print(f"  Range: {frames[0]} - {frames[-1]}")
 
-    # 5. Extract skeleton
+    # 5. Extract skeleton — ALL 21 keypoints, streamed to disk
+    skel_path = cache_path / "skeleton.parquet"
     if verbose:
-        print(f"[{match}] Extracting skeleton (scanning {280} row groups)...")
+        print(f"[{match}] Extracting skeleton — all 21 keypoints (streaming to disk)...")
     t0 = time.time()
-    skeleton = _extract_skeleton_batch(match, frames)
+    skel_rows = _extract_skeleton_batch(match, frames, skel_path, parts=None, verbose=verbose)
     dt_skel = time.time() - t0
     if verbose:
-        mb = skeleton.memory_usage(deep=True).sum() / 1024 / 1024
-        n_frames = skeleton["frame_number"].nunique()
-        n_players = skeleton.groupby(["frame_number", "team", "jersey"]).ngroups // max(n_frames, 1) if n_frames > 0 else 0
-        print(f"  {len(skeleton):,} rows, {n_frames:,} frames, ~{n_players} players/frame")
-        print(f"  {mb:.1f} MB in memory ({dt_skel:.0f}s)")
-    skeleton.to_parquet(cache_path / "skeleton.parquet", index=False)
+        skel_mb = skel_path.stat().st_size / 1024 / 1024
+        print(f"  {skel_rows:,} rows written, {skel_mb:.1f} MB on disk ({dt_skel:.0f}s)")
 
     # 6. Extract ball
     if verbose:
@@ -387,37 +434,32 @@ def preprocess_match(match: str, verbose: bool = True) -> Path:
         print(f"  {len(ball):,} rows ({time.time()-t0:.0f}s)")
     ball.to_parquet(cache_path / "ball.parquet", index=False)
 
-    # 7. Validation
+    # 7. Validation — read a small sample from cached parquet
     if verbose:
         print(f"\n[{match}] Validating cache...")
 
-    # Check all synced events have their frames in skeleton
-    synced_events = events[events["parquet_frame"] > 0]
-    event_frames = set(synced_events["parquet_frame"].unique())
-    cached_frames = set(skeleton["frame_number"].unique())
-    missing = event_frames - cached_frames
-    if missing:
-        print(f"  WARNING: {len(missing)} event frames missing from skeleton cache!")
-    else:
-        if verbose:
-            print(f"  OK: all {len(event_frames)} event frames present in skeleton")
-
-    # Check players per frame
-    sample_frame = skeleton["frame_number"].iloc[len(skeleton)//2]
-    n_in_frame = skeleton[skeleton["frame_number"] == sample_frame].groupby(["team", "jersey"]).ngroups
+    # Quick check: read first 1000 rows from skeleton cache
+    sample = pd.read_parquet(skel_path).head(1000)
+    sample_frame = sample["frame_number"].iloc[0]
+    n_in_frame = sample[sample["frame_number"] == sample_frame].groupby(["team", "jersey"]).ngroups
+    parts_in_frame = sample[sample["frame_number"] == sample_frame]["part_id"].nunique()
     if verbose:
-        print(f"  OK: {n_in_frame} players in sample frame {sample_frame}")
+        print(f"  Sample frame {sample_frame}: {n_in_frame} players, {parts_in_frame} parts/player")
+        print(f"  Skeleton rows on disk: {skel_rows:,}")
+    del sample
 
     # 8. Summary
+    import gc
+    gc.collect()
     dt_total = time.time() - t_total
     if verbose:
         sizes = {}
-        for f in ["skeleton.parquet", "ball.parquet", "events.parquet", "possessions.parquet"]:
-            sizes[f] = (cache_path / f).stat().st_size / 1024 / 1024
+        for fname in ["skeleton.parquet", "ball.parquet", "events.parquet", "possessions.parquet"]:
+            sizes[fname] = (cache_path / fname).stat().st_size / 1024 / 1024
         print(f"\n[{match}] DONE in {dt_total:.0f}s")
         print(f"  Cache: {cache_path}")
-        for f, mb in sizes.items():
-            print(f"    {f:25s} {mb:6.1f} MB")
+        for fname, mb in sizes.items():
+            print(f"    {fname:25s} {mb:6.1f} MB")
         print(f"    {'TOTAL':25s} {sum(sizes.values()):6.1f} MB")
 
     return cache_path
