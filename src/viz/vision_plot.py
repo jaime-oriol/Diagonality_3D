@@ -22,9 +22,9 @@ from ..vision import compute_player_vision
 
 from .common import BG, WHITE, FONT, PKW
 
-from .common import ATT as ATT_C, DEF as DEF_C, GK as GK_C, BALL as BALL_C
+from .common import ATT as ATT_C, ATT_LIGHT, DEF as DEF_C, DEF_LIGHT, GK as GK_C, BALL as BALL_C
 PE_S = [pe.withStroke(linewidth=1.5, foreground="black"), pe.Normal()]
-MS = 17
+MS = 20
 
 
 def plot_vision_frame(
@@ -39,11 +39,13 @@ def plot_vision_frame(
     figsize: tuple = (16, 10.4),
     att_team: int = 1,
     gk_jerseys: dict = None,
+    ax: plt.Axes = None,
 ) -> plt.Figure:
     """Render vision map for one focus player on the pitch.
 
     Args:
         gk_jerseys: {team_id: jersey} for GK identification. Default {0:1, 1:1}.
+        ax: existing axes to draw on (for animation). If None, creates new figure.
     """
     if gk_jerseys is None:
         gk_jerseys = {0: 1, 1: 1}
@@ -65,32 +67,35 @@ def plot_vision_frame(
         smoothing=smoothing,
     )
 
-    # Cmap: focus team color -> white -> rival color
-    focus_color = DEF_C if focus_team != att_team else ATT_C
-    rival_color = ATT_C if focus_team != att_team else DEF_C
+    # Cmap: deep/dark versions of team colors for the overlay backdrop
+    # Rival deep -> white -> focus deep
+    DEEP_ATT = "#1a6b8a"   # dark deepskyblue
+    DEEP_DEF = "#8b2020"   # dark tomato
+    focus_deep = DEEP_DEF if focus_team != att_team else DEEP_ATT
+    rival_deep = DEEP_ATT if focus_team != att_team else DEEP_DEF
     vision_cmap = mcolors.LinearSegmentedColormap.from_list(
-        "vis", [rival_color, WHITE, focus_color]
+        "vis", [rival_deep, WHITE, focus_deep]
     )
     vision_norm = mcolors.TwoSlopeNorm(vmin=0, vcenter=0.5, vmax=1)
 
-    # Build RGBA:
-    # - Outside FOV (grid==0) -> fully transparent (shows pitch BG)
-    # - Inside FOV, high vision -> focus team color, opaque
-    # - Inside FOV, occlusion shadow -> transparent (shows pitch BG = "black shadow")
-    mapped = vision_cmap(vision_norm(grid))  # (H, W, 4) RGBA
-    # Alpha: proportional to vision value INSIDE the FOV
-    # grid>0.01 means inside FOV. Higher vision = more opaque color.
-    # Occlusion drops vision toward 0 inside FOV = alpha drops = black BG shows through = shadow
-    inside_fov = grid > 0.005
-    mapped[:, :, 3] = np.where(inside_fov, np.clip(grid * 0.7, 0.05, 0.65), 0.0)
-
     # ── Render ──
-    fig, ax = plt.subplots(figsize=figsize)
-    fig.set_facecolor(BG)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+        fig.set_facecolor(BG)
+    else:
+        fig = ax.get_figure()
     pitch = Pitch(**PKW)
     pitch.draw(ax=ax)
 
-    # Vision overlay — transparent outside FOV
+    # Vision overlay:
+    # - Outside FOV (grid=0): transparent -> pitch BG shows
+    # - Inside FOV, visible: focus color, alpha=0.5
+    # - Inside FOV, occlusion shadow: alpha drops with vision -> BG shows through = dark shadow
+    # No gaussian blur — keeps shadows sharp and clean
+    mapped = vision_cmap(vision_norm(grid))
+    # Alpha tracks vision: high vision = opaque color, low vision (shadow) = transparent = field BG
+    mapped[:, :, 3] = np.clip(grid * 0.6, 0, 0.55)
+
     ax.imshow(mapped, origin="lower",
               extent=[-52.5, 52.5, -34, 34],
               interpolation="bilinear",
@@ -109,23 +114,24 @@ def plot_vision_frame(
                 markeredgecolor=WHITE, markeredgewidth=1.5 if is_focus else 1,
                 alpha=0.85, zorder=5)
 
-        # Shoulder bar (wide, visible — shows body orientation distinctly from head)
+        # Shoulder bar (body orientation — team color, slightly muted)
         if not is_gk and not np.isnan(p.get("shoulder_angle", np.nan)):
-            sw = p.get("shoulder_width", 0.45) * 7  # big scale for visibility
+            sw = p.get("shoulder_width", 0.45) * 7
             perp_l = p["shoulder_angle"] + np.pi / 2
             perp_r = p["shoulder_angle"] - np.pi / 2
             ax.plot([x + (sw/2)*np.cos(perp_l), x + (sw/2)*np.cos(perp_r)],
                     [y + (sw/2)*np.sin(perp_l), y + (sw/2)*np.sin(perp_r)],
-                    color=color, linewidth=5, alpha=0.85, zorder=4,
+                    color=color, linewidth=8, alpha=0.7, zorder=4,
                     solid_capstyle="round")
 
-        # Head wedge (gaze direction — distinct from shoulder bar)
+        # Head wedge (gaze direction — lighter color, stands out)
         if not is_gk and not np.isnan(p.get("head_angle", np.nan)):
-            r = 6 if is_focus else 4.5
+            head_color = ATT_LIGHT if t == att_team else DEF_LIGHT
+            r = 7 if is_focus else 5.5
             wedge = Wedge((x, y), r,
                           np.degrees(p["head_angle"]) - 22.5,
                           np.degrees(p["head_angle"]) + 22.5,
-                          color=color, alpha=0.5, zorder=3)
+                          color=head_color, alpha=0.5, zorder=3)
             ax.add_patch(wedge)
 
         # Jersey number

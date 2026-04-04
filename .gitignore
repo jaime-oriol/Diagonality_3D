@@ -42,5 +42,8 @@ Thumbs.db
 models/
 outputs/
 
+# Test outputs
+test/
+
 # Figures (tracked selectively)
 figures/*.mp4

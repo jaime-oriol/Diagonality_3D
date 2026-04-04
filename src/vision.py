@@ -52,6 +52,8 @@ class Vision:
     smoothing_multiplier: float = 3.0
 
     def __post_init__(self):
+        # Scale human_width by smoothing (Bekkers exact — makes shadows proportional to grid)
+        self.human_width = self.human_width * self.smoothing_multiplier
         self.human_depth = self.human_width / 2.0
 
         grid_length = self.pitch_length * self.smoothing_multiplier

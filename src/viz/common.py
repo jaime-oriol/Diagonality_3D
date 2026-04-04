@@ -36,7 +36,9 @@ FIGURES_DIR.mkdir(exist_ok=True)
 # --- Colors ---------------------------------------------------------------
 
 ATT = "deepskyblue"
+ATT_LIGHT = "lightskyblue"       # head wedge (gaze highlight)
 DEF = "tomato"
+DEF_LIGHT = "lightsalmon"        # head wedge (gaze highlight)
 GK = "black"
 BALL = WHITE
 VISION = "#00ff88"           # vision cones
