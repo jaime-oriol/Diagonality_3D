@@ -1,12 +1,13 @@
 """
 vision — Bekkers (SSAC 2026) Vision model, ported to TRACAB meters.
 
-This is Bekkers' exact code copied and adapted for:
+Adapted from Bekkers for:
   - Coordinates: TRACAB meters centered (-52.5 to 52.5, -34 to 34)
-    instead of Respo.Vision (0 to 100, 0 to 64)
-  - human_width: 0.45m (real skeleton) instead of 1.8 (arbitrary)
+  - Per-occluder shoulder_width from real 3D skeleton keypoints
+    (Bekkers used a fixed arbitrary width for all players)
 
-All formulas, Gaussians, occlusion logic: UNCHANGED from Bekkers.
+All FOV formulas, Gaussians, speed modulation: UNCHANGED from Bekkers.
+Occlusion now uses real per-occluder body dimensions from skeleton data.
 """
 
 import numpy as np
@@ -35,7 +36,7 @@ def _get_empty_grid(grid_length, grid_width):
     return np.zeros((int(grid_width), int(grid_length)))
 
 
-# --- Vision class (Bekkers exact, centered coords) ------------------------
+# --- Vision class (Bekkers FOV + per-occluder real widths) ----------------
 
 @dataclass
 class Vision:
@@ -48,12 +49,11 @@ class Vision:
     max_occlusion_alpha: float = 0.7
     wedge_radius: float = 150.0
     vision_angle: int = 120
-    human_width: float = 1.8  # visual occlusion width (Bekkers default, not anatomical)
+    human_width: float = 0.45   # fallback occlusion width (meters, real anatomical)
     smoothing_multiplier: float = 3.0
 
     def __post_init__(self):
-        # Scale human_width by smoothing (Bekkers exact — makes shadows proportional to grid)
-        self.human_width = self.human_width * self.smoothing_multiplier
+        # Depth = half of width (front-to-back body thickness)
         self.human_depth = self.human_width / 2.0
 
         grid_length = self.pitch_length * self.smoothing_multiplier
@@ -114,7 +114,7 @@ class Vision:
             return m / mx if mx > 0 else m
         return m
 
-    # --- FOV (formulas 1-3) -----------------------------------------------
+    # --- FOV (formulas 1-3) — unchanged from Bekkers ----------------------
 
     def binary_field_of_view(self):
         player_grid = np.copy(self.grid)
@@ -137,19 +137,18 @@ class Vision:
         self.fov = self._normalize(pvp)
         return self.fov
 
-    # --- Occlusion (formulas 4-7) — Bekkers exact -------------------------
+    # --- Occlusion (formulas 4-7) — per-occluder real widths ---------------
 
-    def _occlusion_vec(self, x2s, y2s, shoulder_angles, dist_ij):
-        # Shoulder offset in REAL meters (not divided by smoothing — our linspace is in meters)
-        def _sh_loc(c, func, perp):
-            return c + (self.human_width / 2.0) * func(perp)
+    def _occlusion_vec(self, x2s, y2s, shoulder_angles, dist_ij, widths):
+        """Shadow mask per occluder. widths: per-occluder body width in meters."""
+        half_w = widths / 2.0
 
         perp_l = shoulder_angles + np.pi / 2
         perp_r = shoulder_angles - np.pi / 2
-        sl_x = _sh_loc(x2s, np.cos, perp_l)
-        sl_y = _sh_loc(y2s, np.sin, perp_l)
-        sr_x = _sh_loc(x2s, np.cos, perp_r)
-        sr_y = _sh_loc(y2s, np.sin, perp_r)
+        sl_x = x2s + half_w * np.cos(perp_l)
+        sl_y = y2s + half_w * np.sin(perp_l)
+        sr_x = x2s + half_w * np.cos(perp_r)
+        sr_y = y2s + half_w * np.sin(perp_r)
 
         d_sl = self._distance(sl_x - self.x, sl_y - self.y)
         d_sr = self._distance(sr_x - self.x, sr_y - self.y)
@@ -164,19 +163,41 @@ class Vision:
         player_masks[shadow_mask] = self.max_occlusion_alpha
         return player_masks
 
-    def _apparent_width_vec(self, x2s, y2s, angles):
-        hw = self.human_width / 2
-        hd = self.human_depth / 2
-        corners = np.array([[hw,hd],[-hw,hd],[-hw,-hd],[hw,-hd]])
+    def _apparent_width_vec(self, x2s, y2s, angles, widths):
+        """Angular width of each occluder as seen from observer.
+
+        Models each occluder as a rectangle (width x depth) rotated by
+        their shoulder angle. Computes the maximum angular extent of the
+        rectangle as seen from the observer's position.
+
+        Args:
+            widths: per-occluder body width in meters (from real skeleton).
+                    Depth is width/2 (anatomical front-to-back thickness).
+        """
+        hw = widths / 2         # half-width per occluder
+        hd = widths / 4         # half-depth per occluder (depth = width/2)
+
+        # Per-occluder rectangle corners: (N, 4, 2)
+        N = len(x2s)
+        corners = np.zeros((N, 4, 2))
+        corners[:, 0, 0] = hw;  corners[:, 0, 1] = hd
+        corners[:, 1, 0] = -hw; corners[:, 1, 1] = hd
+        corners[:, 2, 0] = -hw; corners[:, 2, 1] = -hd
+        corners[:, 3, 0] = hw;  corners[:, 3, 1] = -hd
+
         cos_a, sin_a = np.cos(angles), np.sin(angles)
-        rot = np.array([[[c,-s],[s,c]] for c,s in zip(cos_a, sin_a)])
-        gc = np.einsum("nij,kj->nki", rot, corners) + np.array([x2s,y2s]).T[:,np.newaxis,:]
+        rot = np.zeros((N, 2, 2))
+        rot[:, 0, 0] = cos_a; rot[:, 0, 1] = -sin_a
+        rot[:, 1, 0] = sin_a; rot[:, 1, 1] = cos_a
+
+        gc = (np.einsum("nij,nkj->nki", rot, corners)
+              + np.column_stack([x2s, y2s])[:, np.newaxis, :])
         obs = np.array([self.x, self.y])
         vecs = gc - obs[np.newaxis, np.newaxis, :]
-        v1, v2 = vecs[:,[0,1],:], vecs[:,[2,3],:]
-        dots = np.sum(v1*v2, axis=2)
+        v1, v2 = vecs[:, [0, 1], :], vecs[:, [2, 3], :]
+        dots = np.sum(v1 * v2, axis=2)
         mags = np.linalg.norm(v1, axis=2) * np.linalg.norm(v2, axis=2)
-        ab = np.arccos(np.clip(dots/(mags+1e-10), -1, 1))
+        ab = np.arccos(np.clip(dots / (mags + 1e-10), -1, 1))
         return np.max(ab, axis=1)
 
     def _inter_player_angle_difference(self, angle):
@@ -189,24 +210,45 @@ class Vision:
         ag = self._gaussian(cs, alpha, sigma_a)
         return self._normalize(ag)
 
-    def occlusions(self, x2s, y2s, shoulder_angles, sigma_a=0.2):
+    def occlusions(self, x2s, y2s, shoulder_angles, shoulder_widths=None, sigma_a=0.2):
+        """Compute occlusion from all other players.
+
+        Args:
+            shoulder_widths: per-occluder body width in meters (from skeleton).
+                If None, uses self.human_width for all occluders.
+        """
         x2s = np.asarray(x2s, dtype=float)
         y2s = np.asarray(y2s, dtype=float)
         shoulder_angles = np.asarray(shoulder_angles, dtype=float)
+
+        if shoulder_widths is None:
+            widths = np.full(len(x2s), self.human_width)
+        else:
+            widths = np.asarray(shoulder_widths, dtype=float)
+            # Anatomical correction: skeleton keypoints mark the shoulder JOINT,
+            # not the body edge. Deltoid + soft tissue extends ~6cm beyond each
+            # joint, so we add 12cm total to get real body silhouette width.
+            widths = widths + 0.12
+
         theta_ij = self._angle(dx=x2s - self.x, dy=y2s - self.y)
         dist_ij = self._distance(dx=x2s - self.x, dy=y2s - self.y)
         theta_diff = self._inter_player_angle_difference(angle=theta_ij)
-        omega = self._apparent_width_vec(x2s, y2s, shoulder_angles)
+        omega = self._apparent_width_vec(x2s, y2s, shoulder_angles, widths)
         c_s = 1 / (omega / (dist_ij + 1e-10))
         occ_prof = self._occlusion_profile(c_s, theta_diff, sigma_a)
-        p_mask = self._occlusion_vec(x2s, y2s, shoulder_angles, dist_ij)
+        p_mask = self._occlusion_vec(x2s, y2s, shoulder_angles, dist_ij, widths)
         masks = 1 - (occ_prof * p_mask)
         self.occs = np.prod(masks, axis=0)
         return self.occs
 
-    def compute(self, x2s, y2s, shoulder_angles):
+    def compute(self, x2s, y2s, shoulder_angles, shoulder_widths=None):
+        """Compute full vision grid: FOV * occlusion.
+
+        Args:
+            shoulder_widths: per-occluder body width in meters. None = default.
+        """
         fov = self.field_of_view()
-        occs = self.occlusions(x2s, y2s, shoulder_angles)
+        occs = self.occlusions(x2s, y2s, shoulder_angles, shoulder_widths)
         self.vision = fov * occs
         return self.vision
 
@@ -215,15 +257,26 @@ class Vision:
 
 def compute_player_vision(player_x, player_y, head_angle, speed,
                           other_x, other_y, other_shoulder_angles,
-                          shoulder_width=0.45, smoothing=3.0):
+                          other_shoulder_widths=None, smoothing=3.0):
+    """Compute vision grid for one player.
+
+    Args:
+        other_shoulder_widths: per-occluder body width in meters (from skeleton).
+            Each occluder uses its own real shoulder width for occlusion.
+            If None, falls back to 0.45m (anatomical average).
+    """
     v = Vision(x=player_x, y=player_y, head_angle=head_angle, speed=speed,
-               human_width=shoulder_width, smoothing_multiplier=smoothing)
+               smoothing_multiplier=smoothing)
+    sw = (np.asarray(other_shoulder_widths, dtype=float)
+          if other_shoulder_widths is not None else None)
     return v.compute(np.asarray(other_x, dtype=float),
                      np.asarray(other_y, dtype=float),
-                     np.asarray(other_shoulder_angles, dtype=float))
+                     np.asarray(other_shoulder_angles, dtype=float),
+                     sw)
 
 
 def compute_team_vision(orientations_frame, team, smoothing=3.0):
+    """Compute combined vision for a team. Uses real per-occluder shoulder widths."""
     all_p = orientations_frame
     team_p = all_p[all_p["team"] == team]
     dummy = Vision(x=0, y=0, head_angle=0, speed=0, smoothing_multiplier=smoothing)
@@ -233,12 +286,14 @@ def compute_team_vision(orientations_frame, team, smoothing=3.0):
         j = int(p["jersey"])
         others = all_p[all_p.index != p.name]
         if len(others) == 0: continue
+        # Real per-occluder shoulder widths from skeleton data
+        other_sw = others["shoulder_width"].values if "shoulder_width" in others.columns else None
         g = compute_player_vision(
             p["x"], p["y"], p["head_angle"],
             p.get("speed", 0.0) if not np.isnan(p.get("speed", 0.0)) else 0.0,
             others["x"].values, others["y"].values,
             others["shoulder_angle"].values,
-            shoulder_width=p.get("shoulder_width", 0.45), smoothing=smoothing)
+            other_shoulder_widths=other_sw, smoothing=smoothing)
         grids[j] = g
         combined = 1.0 - (1.0 - combined) * (1.0 - g)
     return {"grids": grids, "combined": combined, "blind_spots": 1.0 - combined}

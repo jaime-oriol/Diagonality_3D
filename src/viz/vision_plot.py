@@ -57,13 +57,19 @@ def plot_vision_frame(
 
     others = fo[fo.index != focus.name]
 
-    # Compute vision grid (Bekkers exact, high res)
+    # Per-occluder shoulder widths — scaled for visual clarity in viz
+    # (analytical model uses raw widths; viz inflates for visible shadows)
+    other_sw = others["shoulder_width"].values if "shoulder_width" in others.columns else None
+    if other_sw is not None:
+        other_sw = other_sw * smoothing
+
+    # Compute vision grid (Bekkers FOV + per-occluder occlusion, high res)
     grid = compute_player_vision(
         focus["x"], focus["y"], focus["head_angle"],
         focus.get("speed", 0.0) if not np.isnan(focus.get("speed", 0.0)) else 0.0,
         others["x"].values, others["y"].values,
         others["shoulder_angle"].values,
-        shoulder_width=focus.get("shoulder_width", 0.45),
+        other_shoulder_widths=other_sw,
         smoothing=smoothing,
     )
 
@@ -141,7 +147,7 @@ def plot_vision_frame(
 
     # Ball
     if ball_x is not None and ball_y is not None:
-        ax.plot(ball_x, ball_y, "o", ms=8, color=BALL_C,
+        ax.plot(ball_x, ball_y, "o", ms=10, color=BALL_C,
                 markeredgecolor="black", markeredgewidth=0.8, zorder=10)
 
     if title:
