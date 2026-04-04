@@ -122,7 +122,7 @@ def plot_vision_frame(
 
         # Shoulder bar (body orientation — team color, slightly muted)
         if not is_gk and not np.isnan(p.get("shoulder_angle", np.nan)):
-            sw = p.get("shoulder_width", 0.45) * 7
+            sw = p.get("shoulder_width", 0.45) * 9
             perp_l = p["shoulder_angle"] + np.pi / 2
             perp_r = p["shoulder_angle"] - np.pi / 2
             ax.plot([x + (sw/2)*np.cos(perp_l), x + (sw/2)*np.cos(perp_r)],
