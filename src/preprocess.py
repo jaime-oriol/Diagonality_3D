@@ -30,7 +30,7 @@ from .loader import (
     MATCHES, MATCH_DIR,
     TEAM_HOME, TEAM_AWAY,
     load_metadata, load_passes, load_carries, load_receptions,
-    synced_frame_to_parquet, _safe_float, _kpi_path,
+    synced_frame_to_parquet, safe_float, kpi_path,
 )
 import xml.etree.ElementTree as ET
 
@@ -49,7 +49,7 @@ PRE_WINDOW_FRAMES = int(1.0 * FRAMERATE)  # 50
 
 def _load_shots_kpi(match: str, metadata: dict) -> pd.DataFrame:
     """Load shots from kpi_data XML with xG, position, SyncedFrameId."""
-    tree = ET.parse(_kpi_path(match))
+    tree = ET.parse(kpi_path(match))
     root = tree.getroot()
 
     rows = []
@@ -71,12 +71,12 @@ def _load_shots_kpi(match: str, metadata: dict) -> pd.DataFrame:
             "player_id": shot.get("PlayerId"),
             "half": half,
             "synced_frame_id": int(synced) if synced and synced_ok else -1,
-            "x": _safe_float(shot.get("X-Position")),
-            "y": _safe_float(shot.get("Y-Position")),
-            "xg": _safe_float(shot.get("xG")),
-            "angle_to_goal": _safe_float(shot.get("AngleToGoal")),
-            "distance_to_goal": _safe_float(shot.get("DistanceToGoal")),
-            "pressure_on_shot": _safe_float(shot.get("PressureOnPlayer")),
+            "x": safe_float(shot.get("X-Position")),
+            "y": safe_float(shot.get("Y-Position")),
+            "xg": safe_float(shot.get("xG")),
+            "angle_to_goal": safe_float(shot.get("AngleToGoal")),
+            "distance_to_goal": safe_float(shot.get("DistanceToGoal")),
+            "pressure_on_shot": safe_float(shot.get("PressureOnPlayer")),
             "is_penalty": shot.get("IsPenalty") == "true",
             "is_free_kick": shot.get("IsFreeKick") == "true",
             "shot_result": shot.get("ShotResult", ""),
@@ -89,7 +89,7 @@ def _load_shots_kpi(match: str, metadata: dict) -> pd.DataFrame:
 
 def _load_possessions(match: str) -> pd.DataFrame:
     """Load TeamPossession sequences from kpi_data XML."""
-    tree = ET.parse(_kpi_path(match))
+    tree = ET.parse(kpi_path(match))
     root = tree.getroot()
 
     rows = []
@@ -104,9 +104,9 @@ def _load_possessions(match: str) -> pd.DataFrame:
         rows.append({
             "event_id": tp.get("EventId"),
             "team_id": tp.get("TeamId"),
-            "vertical_gain_carries": _safe_float(tp.get("VerticalGainCarries")),
-            "sum_xg_ind": _safe_float(tp.get("SumXGInd")),
-            "sum_xg_con": _safe_float(tp.get("SumXGCon")),
+            "vertical_gain_carries": safe_float(tp.get("VerticalGainCarries")),
+            "sum_xg_ind": safe_float(tp.get("SumXGInd")),
+            "sum_xg_con": safe_float(tp.get("SumXGCon")),
             "half": 1 if "first" in tp.get("InGameSection", "").lower() else 2,
             "event_ids": child_ids,
             "n_events": len(child_ids),

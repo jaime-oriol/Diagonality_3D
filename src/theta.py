@@ -34,6 +34,7 @@ and axes 1+2 explain WHY (mechanism).
 import numpy as np
 import pandas as pd
 
+from .loader import infer_attacking_team, compute_attacking_right
 from .orientation import angle_between
 
 # --- DFL direction classification (catalogue p.28) ------------------------
@@ -340,9 +341,9 @@ def compute_carry_theta(
         # Wrap to [-pi, pi]
         relative_angle = np.arctan2(np.sin(relative_angle), np.cos(relative_angle))
     abs_deg = abs(np.degrees(relative_angle))
-    direction = ("forward" if abs_deg <= 22 else
-                 "diagonal" if abs_deg <= 67 else
-                 "sideways" if abs_deg <= 112 else "backward")
+    direction = ("forward" if abs_deg <= 22.5 else
+                 "diagonal" if abs_deg <= 67.5 else
+                 "sideways" if abs_deg <= 112.5 else "backward")
 
     d_x = defenders["x"].values
     d_y = defenders["y"].values
@@ -437,19 +438,14 @@ def compute_all_theta(
             continue
 
         # Determine attacking team
-        attacking_team = _infer_attacking_team(event, orientations, frame)
+        attacking_team = infer_attacking_team(
+            event.get("x"), event.get("y"), orientations, frame)
         if attacking_team is None:
             continue
 
         # Determine attacking direction
-        # home_gk_left_p1=False means home GK on RIGHT -> home attacks LEFT
-        # home_gk_left_p1=True means home GK on LEFT -> home attacks RIGHT
         half = event.get("half", 1)
-        if half == 1:
-            attacking_right = (attacking_team == 1) == home_gk_left_p1
-        else:
-            # Teams swap sides at halftime
-            attacking_right = (attacking_team == 1) != home_gk_left_p1
+        attacking_right = compute_attacking_right(attacking_team, half, home_gk_left_p1)
 
         if etype == "pass":
             result = compute_pass_theta(event, orientations, attacking_team, attacking_right)
@@ -461,20 +457,6 @@ def compute_all_theta(
         results.append(result)
 
     return pd.DataFrame(results)
-
-
-def _infer_attacking_team(event, orientations, frame):
-    """Match event player position to skeleton to find attacking team."""
-    frame_ori = orientations[orientations["frame_number"] == frame]
-    if len(frame_ori) == 0:
-        return None
-    ex, ey = event.get("x"), event.get("y")
-    if pd.isna(ex) or pd.isna(ey):
-        return None
-    dists = np.sqrt((frame_ori["x"].values - ex)**2 + (frame_ori["y"].values - ey)**2)
-    if dists.min() < 3.0:
-        return int(frame_ori.iloc[np.argmin(dists)]["team"])
-    return None
 
 
 # --- Helpers --------------------------------------------------------------

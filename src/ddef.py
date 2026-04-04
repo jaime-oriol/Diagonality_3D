@@ -27,6 +27,8 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
+from .loader import infer_attacking_team, compute_attacking_right
+
 FRAMERATE = 50
 DDEF_WINDOWS = [2.0, 3.0]
 N_LOCAL = 5
@@ -304,18 +306,15 @@ def compute_all_ddef(
             continue
 
         # Infer attacking team from position match
-        attacking_team = _infer_team(row, orientations, frame)
+        attacking_team = infer_attacking_team(
+            row.get("x"), row.get("y"), orientations, frame)
         if attacking_team is None:
             results.append(_empty_ddef(windows))
             continue
 
         defending_team = 1 - attacking_team
         half = int(row.get("half", 1))
-
-        if half == 1:
-            attacking_right = (attacking_team == 1) == home_gk_left_p1
-        else:
-            attacking_right = (attacking_team == 1) != home_gk_left_p1
+        attacking_right = compute_attacking_right(attacking_team, half, home_gk_left_p1)
 
         gk_jersey = away_gk_jersey if defending_team == 0 else home_gk_jersey
 
@@ -365,23 +364,12 @@ def _apply_pca(df: pd.DataFrame, windows: list) -> pd.DataFrame:
             df.loc[valid_mask, f"pc{i+1}_{ws}"] = components[:, i]
 
         df.loc[valid_mask, f"ddef_{ws}"] = np.abs(components).sum(axis=1)
-        df.attrs[f"pca_explained_variance_{ws}"] = pca.explained_variance_ratio_.tolist()
+
+        # Store variance ratios as columns (attrs are lost on serialization)
+        for i in range(pca.n_components_):
+            df[f"pca_var_ratio_pc{i+1}_{ws}"] = pca.explained_variance_ratio_[i]
 
     return df
-
-
-def _infer_team(row, orientations, frame):
-    """Infer attacking team from event position."""
-    ex, ey = row.get("x"), row.get("y")
-    if pd.isna(ex) or pd.isna(ey):
-        return None
-    frame_ori = orientations[orientations["frame_number"] == frame]
-    if len(frame_ori) == 0:
-        return None
-    dists = np.sqrt((frame_ori["x"].values - ex)**2 + (frame_ori["y"].values - ey)**2)
-    if dists.min() < 3.0:
-        return int(frame_ori.iloc[np.argmin(dists)]["team"])
-    return None
 
 
 def _empty_ddef(windows):

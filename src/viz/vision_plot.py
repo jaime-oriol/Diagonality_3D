@@ -24,7 +24,7 @@ from .common import BG, WHITE, FONT, PKW
 
 from .common import ATT as ATT_C, ATT_LIGHT, DEF as DEF_C, DEF_LIGHT, GK as GK_C, BALL as BALL_C
 PE_S = [pe.withStroke(linewidth=1.5, foreground="black"), pe.Normal()]
-MS = 20
+MS = 20  # larger than common.py MS=12 — vision plot needs bigger markers for overlay contrast
 
 
 def plot_vision_frame(
@@ -147,7 +147,6 @@ def plot_vision_frame(
     if title:
         ax.set_title(title, color=WHITE, fontsize=14, fontweight="bold", pad=12)
 
-    plt.tight_layout()
     if save_path:
         fig.savefig(save_path, dpi=400, facecolor=fig.get_facecolor(), bbox_inches="tight")
 

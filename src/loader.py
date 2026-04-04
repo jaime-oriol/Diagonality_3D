@@ -52,7 +52,8 @@ TEAM_AWAY = 0
 TEAM_REF = 3
 
 # Parts we need for orientation (subset for efficiency)
-ORIENTATION_PARTS = {1, 2, 3, 4, 5, 6, 11, 12, 13}
+# Includes ankles (16, 17) for stance_width in orientation.py
+ORIENTATION_PARTS = {1, 2, 3, 4, 5, 6, 11, 12, 13, 16, 17}
 
 
 # --- Metadata -------------------------------------------------------------
@@ -285,7 +286,7 @@ def frame_to_seconds(
 
 # --- AdvancedEvents (kpi_data XML) ----------------------------------------
 
-def _kpi_path(match: str) -> Path:
+def kpi_path(match: str) -> Path:
     """Return path to the kpi_data XML file."""
     return MATCH_DIR / match / f"kpi_data_{match}.xml"
 
@@ -304,9 +305,10 @@ def load_passes(match: str) -> pd.DataFrame:
         back_line_break, through_ball, defensive_state,
         play_num_in_possession,
         x_player_speed, y_player_speed,
+        x_direction, y_direction,
     Coordinates in METERS.
     """
-    tree = ET.parse(_kpi_path(match))
+    tree = ET.parse(kpi_path(match))
     root = tree.getroot()
 
     rows = []
@@ -333,28 +335,28 @@ def load_passes(match: str) -> pd.DataFrame:
             "synced_frame_id": int(synced),
             "game_time": play.get("GameTime", ""),
             "half": half,
-            "x": _safe_float(play.get("X-Position")),
-            "y": _safe_float(play.get("Y-Position")),
-            "x_receiver": _safe_float(play.get("X-PositionReceiver")),
-            "y_receiver": _safe_float(play.get("Y-PositionReceiver")),
-            "play_angle": _safe_float(play.get("PlayAngle")),
-            "distance": _safe_float(play.get("Distance")),
-            "max_height": _safe_float(play.get("MaxHeight")),
-            "xp": _safe_float(play.get("xP")),
-            "pressure_player": _safe_float(play.get("PressureOnPlayer")),
-            "pressure_receiver": _safe_float(play.get("PressureOnReceiver")),
-            "dist_closest_defender": _safe_float(play.get("DistanceClosestDefenderToPlayer")),
-            "num_defenders_goal_side": _safe_int(play.get("NumDefendersGoalSide")),
-            "num_defenders_passing_lane": _safe_int(play.get("NumDefendersPassingLane")),
-            "bypassed_defenders": _safe_int(play.get("ByPassedDefenders")),
+            "x": safe_float(play.get("X-Position")),
+            "y": safe_float(play.get("Y-Position")),
+            "x_receiver": safe_float(play.get("X-PositionReceiver")),
+            "y_receiver": safe_float(play.get("Y-PositionReceiver")),
+            "play_angle": safe_float(play.get("PlayAngle")),
+            "distance": safe_float(play.get("Distance")),
+            "max_height": safe_float(play.get("MaxHeight")),
+            "xp": safe_float(play.get("xP")),
+            "pressure_player": safe_float(play.get("PressureOnPlayer")),
+            "pressure_receiver": safe_float(play.get("PressureOnReceiver")),
+            "dist_closest_defender": safe_float(play.get("DistanceClosestDefenderToPlayer")),
+            "num_defenders_goal_side": safe_int(play.get("NumDefendersGoalSide")),
+            "num_defenders_passing_lane": safe_int(play.get("NumDefendersPassingLane")),
+            "bypassed_defenders": safe_int(play.get("ByPassedDefenders")),
             "back_line_break": play.get("BackLineBreak") == "true",
             "through_ball": play.get("ThroughBall") == "true",
             "defensive_state": play.get("DefensiveState", ""),
-            "play_num_in_possession": _safe_int(play.get("PlayNumInPossession")),
-            "x_player_speed": _safe_float(play.get("X-PlayerSpeed")),
-            "y_player_speed": _safe_float(play.get("Y-PlayerSpeed")),
-            "x_direction": _safe_float(play.get("X-Direction")),
-            "y_direction": _safe_float(play.get("Y-Direction")),
+            "play_num_in_possession": safe_int(play.get("PlayNumInPossession")),
+            "x_player_speed": safe_float(play.get("X-PlayerSpeed")),
+            "y_player_speed": safe_float(play.get("Y-PlayerSpeed")),
+            "x_direction": safe_float(play.get("X-Direction")),
+            "y_direction": safe_float(play.get("Y-Direction")),
         })
 
     return pd.DataFrame(rows)
@@ -369,7 +371,7 @@ def load_carries(match: str) -> pd.DataFrame:
         x, y, x_end, y_end, distance,
         defensive_state_start, defensive_state_end,
     """
-    tree = ET.parse(_kpi_path(match))
+    tree = ET.parse(kpi_path(match))
     root = tree.getroot()
 
     rows = []
@@ -391,12 +393,12 @@ def load_carries(match: str) -> pd.DataFrame:
             "player_id": carry.get("PlayerId"),
             "half": half,
             "synced_frame_id": int(synced),
-            "end_synced_frame_id": _safe_int(carry.get("EndSyncedFrameId")),
-            "x": _safe_float(carry.get("X-Position")),
-            "y": _safe_float(carry.get("Y-Position")),
-            "x_end": _safe_float(carry.get("X-EndPosition")),
-            "y_end": _safe_float(carry.get("Y-EndPosition")),
-            "distance": _safe_float(carry.get("Distance")),
+            "end_synced_frame_id": safe_int(carry.get("EndSyncedFrameId")),
+            "x": safe_float(carry.get("X-Position")),
+            "y": safe_float(carry.get("Y-Position")),
+            "x_end": safe_float(carry.get("X-EndPosition")),
+            "y_end": safe_float(carry.get("Y-EndPosition")),
+            "distance": safe_float(carry.get("Distance")),
             "defensive_state_start": carry.get("DefensiveStateStart", ""),
             "defensive_state_end": carry.get("DefensiveStateEnd", ""),
         })
@@ -406,7 +408,7 @@ def load_carries(match: str) -> pd.DataFrame:
 
 def load_receptions(match: str) -> pd.DataFrame:
     """Load all reception events from kpi_data XML."""
-    tree = ET.parse(_kpi_path(match))
+    tree = ET.parse(kpi_path(match))
     root = tree.getroot()
 
     rows = []
@@ -429,36 +431,13 @@ def load_receptions(match: str) -> pd.DataFrame:
             "player_id": rec.get("PlayerId"),
             "half": half,
             "synced_frame_id": int(synced),
-            "x": _safe_float(rec.get("X-Position")),
-            "y": _safe_float(rec.get("Y-Position")),
+            "x": safe_float(rec.get("X-Position")),
+            "y": safe_float(rec.get("Y-Position")),
             "is_interception": rec.get("IsInterception") == "true",
-            "pressure_receiver": _safe_float(rec.get("PressureOnReceiver")),
-            "x_receiver_speed": _safe_float(rec.get("X-ReceiverSpeed")),
-            "y_receiver_speed": _safe_float(rec.get("Y-ReceiverSpeed")),
+            "pressure_receiver": safe_float(rec.get("PressureOnReceiver")),
+            "x_receiver_speed": safe_float(rec.get("X-ReceiverSpeed")),
+            "y_receiver_speed": safe_float(rec.get("Y-ReceiverSpeed")),
             "defensive_state": rec.get("DefensiveState", ""),
-        })
-
-    return pd.DataFrame(rows)
-
-
-def load_shots(match: str) -> pd.DataFrame:
-    """Load all shot events from Events XML."""
-    tree = ET.parse(MATCH_DIR / match / f"Events_{match}.xml")
-    root = tree.getroot()
-
-    rows = []
-    for shot in root.iter("ShotAtGoal"):
-        event_id = shot.get("EventId", "")
-        is_goal = shot.find("SuccessfulShot") is not None
-
-        rows.append({
-            "event_id": event_id,
-            "team_id": shot.get("Team", ""),
-            "player_id": shot.get("Player", ""),
-            "x": _safe_float(shot.get("X-Position")),
-            "y": _safe_float(shot.get("Y-Position")),
-            "xg": _safe_float(shot.get("xG")),
-            "is_goal": is_goal,
         })
 
     return pd.DataFrame(rows)
@@ -487,8 +466,8 @@ def load_match_info(match: str) -> Dict:
     env = root.find(".//Environment")
     if env is not None:
         info["stadium"] = env.get("StadiumName", "")
-        info["pitch_x"] = _safe_float(env.get("PitchX"))
-        info["pitch_y"] = _safe_float(env.get("PitchY"))
+        info["pitch_x"] = safe_float(env.get("PitchX"))
+        info["pitch_y"] = safe_float(env.get("PitchY"))
 
     # Teams
     for team_elem in root.iter("Team"):
@@ -502,7 +481,7 @@ def load_match_info(match: str) -> Dict:
         for p in team_elem.iter("Player"):
             players.append({
                 "person_id": p.get("PersonId", ""),
-                "shirt_number": _safe_int(p.get("ShirtNumber")),
+                "shirt_number": safe_int(p.get("ShirtNumber")),
                 "name": p.get("Shortname", ""),
                 "starting": p.get("Starting") == "true",
                 "position": p.get("PlayingPosition", ""),
@@ -514,7 +493,7 @@ def load_match_info(match: str) -> Dict:
 
 # --- Helpers --------------------------------------------------------------
 
-def _safe_float(val) -> float:
+def safe_float(val) -> float:
     """Convert string to float, return NaN if None or invalid."""
     if val is None:
         return np.nan
@@ -524,7 +503,7 @@ def _safe_float(val) -> float:
         return np.nan
 
 
-def _safe_int(val) -> int:
+def safe_int(val) -> int:
     """Convert string to int, return -1 if None or invalid."""
     if val is None:
         return -1
@@ -532,6 +511,43 @@ def _safe_int(val) -> int:
         return int(val)
     except (ValueError, TypeError):
         return -1
+
+
+# --- Shared game logic (used by theta.py, ddef.py) -----------------------
+
+def infer_attacking_team(
+    event_x: float,
+    event_y: float,
+    orientations: pd.DataFrame,
+    frame: int,
+    max_dist: float = 3.0,
+) -> Optional[int]:
+    """Match event position to skeleton to find the attacking team.
+
+    Returns team (0 or 1) of the nearest player to (event_x, event_y)
+    at the given frame, or None if no match within max_dist.
+    """
+    if pd.isna(event_x) or pd.isna(event_y):
+        return None
+    frame_ori = orientations[orientations["frame_number"] == frame]
+    if len(frame_ori) == 0:
+        return None
+    dists = np.sqrt((frame_ori["x"].values - event_x)**2 + (frame_ori["y"].values - event_y)**2)
+    if dists.min() < max_dist:
+        return int(frame_ori.iloc[np.argmin(dists)]["team"])
+    return None
+
+
+def compute_attacking_right(attacking_team: int, half: int, home_gk_left_p1: bool) -> bool:
+    """Determine if the attacking team attacks toward +X (right).
+
+    home_gk_left_p1=False -> home GK on RIGHT in half 1 -> home attacks LEFT.
+    Teams swap sides at halftime.
+    """
+    if half == 1:
+        return (attacking_team == 1) == home_gk_left_p1
+    else:
+        return (attacking_team == 1) != home_gk_left_p1
 
 
 def get_match_list() -> List[str]:

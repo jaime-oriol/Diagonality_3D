@@ -28,8 +28,8 @@ Diagonality_3D/
 │   ├── vision.py                # Vision model (adapted Bekkers)
 │   ├── theta.py                 # Theta computation per event (passes, carries, runs)
 │   ├── ddef.py                  # D-Def: defensive disruption (Goes et al.)
-│   ├── ppcf.py                  # Orientation-Aware PPCF (PyTorch)
-│   ├── dos.py                   # Diagonal Opportunity Surfaces
+│   ├── ppcf.py                  # Orientation-Aware PPCF (pendiente)
+│   ├── dos.py                   # Diagonal Opportunity Surfaces (pendiente)
 │   └── viz/                     # Visualization package
 │
 ├── notebooks/
