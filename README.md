@@ -16,27 +16,27 @@ Do diagonal actions — passes, carries and off-ball runs — systematically exp
 
 ```
 Diagonality_3D/
-├── docs/                        # Research and data documentation
+├── docs/                        # Research and data documentation (git-ignored)
+│   ├── CHECKPOINT.md            # Full project state snapshot
 │   ├── propuesta_final.md       # Full project proposal
 │   ├── hackathon_data.md        # Complete data inventory (verified)
 │   ├── diagonality.md           # Spielverlagerung tactical theory
-│   └── vision_de_paul.md        # Bekkers SSAC 2026 vision model paper
+│   ├── vision_de_paul.md        # Bekkers SSAC 2026 vision model paper
+│   └── the_diagonalist_manifesto.md  # Hamilton manifesto
 │
 ├── src/                         # Python modules
 │   ├── loader.py                # Parquet skeleton + XML events unified loader
+│   ├── preprocess.py            # Per-match cache extraction
 │   ├── orientation.py           # Head/shoulder/hip orientation from keypoints
 │   ├── vision.py                # Vision model (adapted Bekkers)
-│   ├── theta.py                 # Theta computation per event (passes, carries, runs)
+│   ├── theta.py                 # Theta computation per event (passes, carries)
 │   ├── ddef.py                  # D-Def: defensive disruption (Goes et al.)
-│   ├── ppcf.py                  # Orientation-Aware PPCF (pendiente)
-│   ├── dos.py                   # Diagonal Opportunity Surfaces (pendiente)
-│   └── viz/                     # Visualization package
+│   └── viz/                     # Visualization package (common, vision_plot)
 │
-├── notebooks/
-│   └── main.ipynb               # Main deliverable — full analysis
-│
+├── cache/                       # Git-ignored (preprocessed per match)
 ├── data/                        # Git-ignored (~20GB hackathon data)
 ├── references/                  # Git-ignored (Bekkers code)
+├── test/                        # Git-ignored
 └── figures/                     # Pre-rendered outputs
 ```
 
