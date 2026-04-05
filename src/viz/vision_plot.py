@@ -20,8 +20,7 @@ from ..vision import compute_player_vision
 
 # ── Style: shared base from common.py + vision-specific colors ──
 
-from .common import BG, WHITE, FONT, PKW
-
+from .common import BG, WHITE, PKW
 from .common import ATT as ATT_C, ATT_LIGHT, DEF as DEF_C, DEF_LIGHT, GK as GK_C, BALL as BALL_C
 PE_S = [pe.withStroke(linewidth=1.5, foreground="black"), pe.Normal()]
 MS = 20  # larger than common.py MS=12 — vision plot needs bigger markers for overlay contrast

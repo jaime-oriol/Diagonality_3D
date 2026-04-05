@@ -1,36 +1,46 @@
 """
-ppcf - Immediate Orientation-Aware Pitch Control.
+ppcf — Immediate Orientation-Aware PPCF via Reach Fields.
 
-Extends Spearman (2018) PPCF (vectorized port, LaurieOnTracking-style) with:
-  1. Immediate window: integration truncated to ~1s from NOW (not asymptotic).
-     Equivalent in spirit to Bekkers' c_in ("imminent control"): who dominates
-     the cell in the very short term, not at infinity.
-  2. Orientation-aware reaction time per (player, target cell):
-        rt(theta) = rt_base + rt_gain * sigmoid((deg(theta) - c) / w)
-     From Vater (2024): reaction time grows monotonically with visual
-     eccentricity up to ~90 degrees. Calibrated as 0.7s at theta=0, 1.1s at
-     theta>=180.
-  3. Change-of-direction penalty per (player, target cell):
-        cod(theta) = A * sin^2(theta/2)
-     From Dos'Santos (2018): biomechanical delay to turn hips before running
-     in a new direction. ~0 at theta=0, ~0.4s at theta=90, ~0.8s at theta=180.
-  4. Total reaction delay per (player, target) = rt(theta) + cod(theta).
-     Applied symmetrically to both teams — theta is the angle between the
-     player's shoulder facing (from 3D skeleton) and the direction from the
-     player to the target cell.
+Per-player anisotropic Gaussian influence model derived directly from
+biomechanics and real 3D skeleton orientation. Each player's blob is
+shaped by the distance they can physically cover in the immediate
+window, which in turn depends on the orientation-aware reaction delay
+applied to their REAL shoulder angle from the skeleton keypoints.
 
-Core algorithm is vectorized numpy: all grid targets evaluated in one pass.
-Mathematically identical to per-target Euler integration (Spearman Eq 2-4),
-extended so that each (player, target) pair has its own reaction delay.
+For each player i and target cell x:
+    theta_i(x) = |angle(shoulder_angle_i, direction(pos_i -> x))|
+    delay_i(x) = rt(theta_i(x)) + cod(theta_i(x))
+                  rt(θ) = base + gain * sigmoid((deg(θ) - c) / w)   # Vater 2024
+                  cod(θ) = A * sin^2(θ / 2)                         # Dos'Santos 2018
+    drift_i(x) = pos_i + vel_i * delay_i(x)                         # where player is when ready
+    reach_i(x) = max(0, W - delay_i(x)) * vmax                      # remaining travel budget
+    sigma_i(x) = min_sigma + reach_i(x) / 2                         # anisotropic Gaussian std
+    infl_i(x)  = exp(-||x - drift_i(x)||^2 / (2 * sigma_i(x)^2))    # in [0, 1]
+
+Per-team control (aggregation):
+    I_att(x) = sum_i infl_i(x) over attackers
+    I_def(x) = sum_i infl_i(x) over defenders
+    ppcf_att(x) = (1 - exp(-(I_att + I_def))) * I_att / (I_att + I_def)
+    ppcf_def(x) = (1 - exp(-(I_att + I_def))) * I_def / (I_att + I_def)
+
+The blob of each player is naturally anisotropic: stretched in the
+direction they face (theta=0 -> low delay -> big reach -> big sigma)
+and compressed in their blind spot (theta=pi -> big delay -> reach=0 ->
+sigma=min_sigma). A defender with the ball in his back literally has a
+hole in his control field on that side — the diagonality thesis made
+visible on a per-player basis.
 
 Coordinate convention: TRACAB meters, centered at (0, 0).
-Grid: 105 x 68 m, configurable resolution.
 All angles in RADIANS.
 
-Reference: Spearman (2018) "Beyond Expected Goals"
+References:
+  - Vater, C. (2024) Reaction time vs visual eccentricity. Sci Rep.
+  - Dos'Santos, T. (2018) Change-of-direction deficit.       Sports Med.
+  - Bekkers, J. (2026) SSAC Wide Open Gazes ("imminent" pitch control).
+  - Spielverlagerung (2025) Tactical Theory: Diagonality.
 """
 
-from typing import Dict, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -40,118 +50,90 @@ PITCH_LENGTH = 105.0
 PITCH_WIDTH = 68.0
 
 
-# --- Default parameters ---------------------------------------------------
+# ── Default parameters ────────────────────────────────────────────────────
 
 def default_params(immediate_window: float = 1.0) -> dict:
-    """Return default Immediate Orientation-Aware PPCF parameters.
+    """Default parameters for the reach-field PPCF.
 
     Args:
-        immediate_window: Integration horizon in seconds (default 1.0).
-            Controls how "immediate" the pitch control is. 1s is calibrated
-            to the upper bound of orientation-induced reaction delay
-            (Vater RT + Dos'Santos COD at theta=180 ~= 1.9s, so within 1s
-            a defender with ball in blind spot barely reacts).
-
-    Returns:
-        Dict with all model parameters. Spearman core params (max_player_speed,
-        tti_sigma, lambdas, ball speed) are identical to the Opta Forum
-        reference implementation. Orientation params (rt_*, cod_*) are new.
+        immediate_window: Integration horizon in seconds. Default 1.0.
+            Calibrated so a well-oriented player (theta=0) has reach
+            ~1.5m after the 0.7s baseline reaction, while blind-spot
+            directions (theta >= 90°) have reach 0.
     """
-    params = {
-        # Spearman 2018 core
-        "max_player_speed": 5.0,           # m/s
-        "tti_sigma": 0.45,                 # arrival-time uncertainty (s)
-        "kappa_def": 1.0,                  # defending advantage factor
-        "lambda_att": 4.3,                 # attacking ball-control rate
-        "average_ball_speed": 15.0,        # m/s
-        "int_dt": 0.04,                    # integration timestep (s)
-        "max_int_time": immediate_window,  # IMMEDIATE horizon (s)
-        "model_converge_tol": 0.01,        # convergence at sum PPCF > 0.99
-        "time_to_control_veto": 3,         # ignore players with p < 10^-veto
-
-        # GK boost: Spearman's asymptotic model uses 3.0 (GK uses hands, so
-        # once they reach the ball they grab it instantly). That's an
-        # asymptotic trick. In IMMEDIATE mode the GK has the same legs and
-        # the same reaction time as a field player; the 3x boost massively
-        # and unphysically inflates their territory. Default to 1.0 (no
-        # boost) for immediate; override if you want asymptotic behavior.
-        "lambda_gk_boost": 1.0,
+    return {
+        # Physical reach bounds
+        "max_player_speed": 5.0,                # m/s
+        "max_int_time": float(immediate_window),  # immediate window (s)
 
         # Orientation-aware reaction time (Vater 2024)
-        "rt_base": 0.7,                    # baseline RT (s)
-        "rt_gain": 0.4,                    # max additional RT at theta=pi (s)
-        "rt_theta_c_deg": 60.0,            # sigmoid center (degrees)
-        "rt_theta_w_deg": 15.0,            # sigmoid width (degrees)
+        # rt(theta) = rt_base + rt_gain * sigmoid((deg(theta) - c) / w)
+        "rt_base": 0.7,
+        "rt_gain": 0.4,
+        "rt_theta_c_deg": 60.0,
+        "rt_theta_w_deg": 15.0,
 
-        # Change-of-direction penalty (Dos'Santos 2018)
-        "cod_amplitude": 0.8,              # COD penalty at theta=pi (s)
+        # Change-of-direction deficit (Dos'Santos 2018)
+        # cod(theta) = cod_amplitude * sin^2(theta / 2)
+        "cod_amplitude": 0.8,
+
+        # Blob geometry
+        # Minimum Gaussian sigma in meters — physical footprint of a
+        # stationary player (half body width + lateral arm reach). Floors
+        # the blob so even blind-spot directions keep a tiny bubble on
+        # the player's own position.
+        "blob_min_sigma": 0.6,
     }
-    params["lambda_def"] = params["lambda_att"] * params["kappa_def"]
-    params["lambda_gk"] = params["lambda_def"] * params["lambda_gk_boost"]
-
-    # Spearman dominance thresholds (used for shortcut veto)
-    veto = params["time_to_control_veto"]
-    sigma_term = np.sqrt(3) * params["tti_sigma"] / np.pi
-    params["time_to_control_att"] = (
-        veto * np.log(10) * (sigma_term + 1 / params["lambda_att"])
-    )
-    params["time_to_control_def"] = (
-        veto * np.log(10) * (sigma_term + 1 / params["lambda_def"])
-    )
-    return params
 
 
-# --- Orientation-aware delay functions ------------------------------------
+# ── Biomechanical delay functions ─────────────────────────────────────────
 
 def reaction_time(theta: np.ndarray, params: dict) -> np.ndarray:
-    """Vater-style reaction time as a function of visual eccentricity.
+    """Vater (2024) reaction time as a function of visual eccentricity.
 
-    theta: unsigned angle (radians) between player facing and direction to
-           target. theta=0 means facing directly at target.
+    theta: unsigned angle (radians) between the player's facing and the
+           direction to the stimulus. 0 = facing stimulus, pi = full blind.
 
-    Returns RT in seconds. Shape preserved from input.
+    Returns seconds, preserving input shape.
     """
     theta_deg = np.degrees(theta)
     c = params["rt_theta_c_deg"]
     w = params["rt_theta_w_deg"]
-    # Clip sigmoid argument to prevent overflow at extreme angles
-    z = np.clip((theta_deg - c) / w, -50, 50)
+    z = np.clip((theta_deg - c) / w, -50, 50)  # prevent overflow at extremes
     sig = 1.0 / (1.0 + np.exp(-z))
     return params["rt_base"] + params["rt_gain"] * sig
 
 
 def cod_penalty(theta: np.ndarray, params: dict) -> np.ndarray:
-    """Dos'Santos-style change-of-direction biomechanical penalty.
+    """Dos'Santos (2018) change-of-direction biomechanical delay.
 
-    theta: unsigned angle (radians). 0 means no turn needed, pi means 180 deg.
-
-    Returns additional delay (s) on top of reaction time, due to
-    hip/shoulder rotation and lateral-to-linear acceleration transition.
+    Extra seconds on top of reaction time to rotate hips and transition
+    from current posture into motion in the target direction. Shaped as
+    sin^2(theta / 2): 0 at theta=0, amplitude at theta=pi.
     """
     return params["cod_amplitude"] * np.sin(theta / 2.0) ** 2
 
 
 def reaction_delay(theta: np.ndarray, params: dict) -> np.ndarray:
-    """Total per-(player,target) delay = RT + COD penalty."""
+    """Total biomechanical delay = reaction_time + cod_penalty (seconds)."""
     return reaction_time(theta, params) + cod_penalty(theta, params)
 
 
-# --- Geometry helpers -----------------------------------------------------
+# ── Geometry ──────────────────────────────────────────────────────────────
 
 def _theta_player_to_targets(
     pos: np.ndarray,
     facing: np.ndarray,
     targets: np.ndarray,
 ) -> np.ndarray:
-    """Angle between each player's facing and direction to each target.
+    """Unsigned angle (radians) between each player's facing and the
+    direction from that player to each target cell.
 
-    Args:
-        pos: (P, 2) player positions in meters.
-        facing: (P,) shoulder facing angles in radians.
-        targets: (N, 2) target positions in meters.
-
-    Returns:
-        (P, N) array of unsigned angles in [0, pi].
+    Shapes:
+        pos:     (P, 2)
+        facing:  (P,)
+        targets: (N, 2)
+    Returns: (P, N) in [0, pi].
     """
     if len(pos) == 0:
         return np.zeros((0, len(targets)))
@@ -159,207 +141,79 @@ def _theta_player_to_targets(
     dy = targets[None, :, 1] - pos[:, None, 1]
     dir_to_target = np.arctan2(dy, dx)
     diff = dir_to_target - facing[:, None]
-    diff_wrapped = np.arctan2(np.sin(diff), np.cos(diff))
-    return np.abs(diff_wrapped)
+    diff = np.arctan2(np.sin(diff), np.cos(diff))
+    return np.abs(diff)
 
 
-def _player_tti(
+# ── Per-player reach-field influence ──────────────────────────────────────
+
+def _player_influence(
     pos: np.ndarray,
     vel: np.ndarray,
     facing: np.ndarray,
     targets: np.ndarray,
     params: dict,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Per-(player, target) time-to-intercept with orientation-aware delay.
-
-    Returns:
-        tti: (P, N) time in seconds from t=0 for each player to reach each
-             target cell, accounting for reaction + COD delay + travel.
-        delay: (P, N) the (rt + cod) component only (for debug/inspection).
-    """
-    if len(pos) == 0:
-        return np.zeros((0, len(targets))), np.zeros((0, len(targets)))
-    vmax = params["max_player_speed"]
-    theta = _theta_player_to_targets(pos, facing, targets)       # (P, N)
-    delay = reaction_delay(theta, params)                        # (P, N)
-    # Position after reaction delay (player assumed to continue current vel
-    # during the delay; no teleportation, same assumption as Spearman).
-    r_pos = pos[:, None, :] + vel[:, None, :] * delay[:, :, None]  # (P, N, 2)
-    diff = targets[None, :, :] - r_pos                           # (P, N, 2)
-    dist = np.linalg.norm(diff, axis=2)                          # (P, N)
-    tti = delay + dist / vmax                                    # (P, N)
-    return tti, delay
-
-
-# --- Core vectorized PPCF -------------------------------------------------
-
-def _ppcf_vectorized_surfaces(
-    targets: np.ndarray,
-    att_pos: np.ndarray, att_vel: np.ndarray, att_gk: np.ndarray, att_facing: np.ndarray,
-    def_pos: np.ndarray, def_vel: np.ndarray, def_gk: np.ndarray, def_facing: np.ndarray,
-    ball_pos: Optional[np.ndarray],
-    params: dict,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Vectorized Immediate Orientation-Aware PPCF, returning BOTH surfaces.
-
-    Returns (ppcf_att, ppcf_def), each shape (N,). The key property of the
-    immediate model is that ppcf_att + ppcf_def can be < 1: the remainder
-    is UNRESOLVED mass (nobody dominates the cell within the window). The
-    viz uses resolved = ppcf_att + ppcf_def as alpha, so unresolved cells
-    fade to the pitch background — which is exactly the semantic difference
-    versus the asymptotic Opta/Spearman model where every cell is resolved.
-
-    Integration variable: t in [0, max_int_time], where t=0 is NOW (the
-    current frame). A player can only contribute to control after their
-    per-target TTI, AND after the ball has arrived at the target.
-    """
-    N = len(targets)
-    Pa, Pd = len(att_pos), len(def_pos)
-
-    # Degenerate: both teams empty -> nothing resolves
-    if Pa == 0 and Pd == 0:
-        return np.zeros(N), np.zeros(N)
-
-    vmax = params["max_player_speed"]
-    sigma = params["tti_sigma"]
-    lam_a = params["lambda_att"]
-    lam_d = params["lambda_def"]
-    lam_gk = params["lambda_gk"]
-    dt = params["int_dt"]
-    max_int = params["max_int_time"]
-    tol = params["model_converge_tol"]
-    tc_a = params["time_to_control_att"]
-    tc_d = params["time_to_control_def"]
-    sig_c = np.pi / np.sqrt(3.0) / sigma
-
-    # Ball travel time to each target (s)
-    if ball_pos is not None and not np.any(np.isnan(ball_pos)):
-        ball_tt = np.linalg.norm(targets - ball_pos, axis=1) / params["average_ball_speed"]
-    else:
-        ball_tt = np.zeros(N)
-
-    # Per-(player, target) time-to-intercept (orientation-aware)
-    att_tti, _ = _player_tti(att_pos, att_vel, att_facing, targets, params)
-    def_tti, _ = _player_tti(def_pos, def_vel, def_facing, targets, params)
-
-    att_min = att_tti.min(axis=0) if Pa else np.full(N, np.inf)
-    def_min = def_tti.min(axis=0) if Pd else np.full(N, np.inf)
-
-    # Pre-allocate output surfaces
-    res_att = np.zeros(N)
-    res_def = np.zeros(N)
-
-    # Spearman dominance shortcut (Opta-style). Uses BALL-RELATIVE TTI:
-    # tc_a and tc_d are thresholds for the tail of the sigmoid. Cells where
-    # one team arrives much earlier than the other, relative to ball
-    # arrival, are assigned directly without running Euler.
-    done_mask = np.zeros(N, dtype=bool)
-    def_dom = (att_min - np.maximum(ball_tt, def_min)) >= tc_d
-    att_dom = (def_min - np.maximum(ball_tt, att_min)) >= tc_a
-    res_def[def_dom] = 1.0
-    done_mask |= def_dom
-    pure_att = att_dom & ~def_dom
-    res_att[pure_att] = 1.0
-    done_mask |= pure_att
-
-    # One-team-empty degenerate cases
-    if Pa == 0:
-        can = ~done_mask
-        res_def[can] = 1.0
-        return res_att, res_def
-    if Pd == 0:
-        can = ~done_mask
-        res_att[can] = 1.0
-        return res_att, res_def
-
-    eidx = np.where(~done_mask)[0]
-    if len(eidx) == 0:
-        return res_att, res_def
-
-    # --- Euler integration (BALL-RELATIVE time) ---
-    # Integration variable tau = t - ball_tt: "time elapsed since ball
-    # arrival at each target". Window is [0, max_int] measured from ball
-    # arrival. This is the Opta/Spearman formulation; our only change is
-    # the short max_int + per-(player, target) orientation-aware TTI in the
-    # player delays. Orientation snapshot frozen at t=0 (current frame),
-    # used as a "what-if" capacity map over the whole pitch.
-    M = len(eidx)
-    e_btt = ball_tt[eidx]                     # (M,)
-    e_att = att_tti[:, eidx]                  # (Pa, M)
-    e_def = def_tti[:, eidx]                  # (Pd, M)
-
-    # TTI relative to ball arrival: if negative, player already there.
-    att_tti_rel = e_att - e_btt[None, :]      # (Pa, M)
-    def_tti_rel = e_def - e_btt[None, :]      # (Pd, M)
-
-    # Active player masks: skip players much slower than team best
-    a_act = (e_att - att_min[eidx]) < tc_a    # (Pa, M)
-    d_act = (e_def - def_min[eidx]) < tc_d    # (Pd, M)
-
-    d_lam = np.where(def_gk, lam_gk, lam_d)[:, None]  # (Pd, 1)
-
-    pa_cum = np.zeros((Pa, M))
-    pd_cum = np.zeros((Pd, M))
-    tot_a = np.zeros(M)
-    tot_d = np.zeros(M)
-    conv = np.zeros(M, dtype=bool)
-
-    for tau in np.arange(0.0, max_int, dt):
-        if conv.all():
-            break
-        live = ~conv
-        rem = 1.0 - tot_a - tot_d
-
-        with np.errstate(over="ignore"):
-            p_a = 1.0 / (1.0 + np.exp(-sig_c * (tau - att_tti_rel)))
-            p_d = 1.0 / (1.0 + np.exp(-sig_c * (tau - def_tti_rel)))
-
-        pa_cum += (rem * p_a * lam_a * a_act * live) * dt
-        pd_cum += (rem * p_d * d_lam * d_act * live) * dt
-        tot_a = pa_cum.sum(axis=0)
-        tot_d = pd_cum.sum(axis=0)
-        conv = (tot_a + tot_d) > (1.0 - tol)
-
-    res_att[eidx] = tot_a
-    res_def[eidx] = tot_d
-    return res_att, res_def
-
-
-def _ppcf_vectorized(
-    targets: np.ndarray,
-    att_pos: np.ndarray, att_vel: np.ndarray, att_gk: np.ndarray, att_facing: np.ndarray,
-    def_pos: np.ndarray, def_vel: np.ndarray, def_gk: np.ndarray, def_facing: np.ndarray,
-    ball_pos: Optional[np.ndarray],
-    params: dict,
 ) -> np.ndarray:
-    """Backward-compat wrapper returning only the attacker surface.
+    """Per-player anisotropic Gaussian influence over all target cells.
 
-    Kept for the existing test suite. New callers should prefer
-    _ppcf_vectorized_surfaces() which returns both att and def, enabling
-    correct "unresolved cell" handling in visualization (alpha from
-    resolved mass).
+    For each (player, cell) pair:
+        theta     = angle between player's shoulder facing and (player -> cell)
+        delay     = rt(theta) + cod(theta)
+        drift     = pos + vel * delay             # where player is when ready
+        reach     = max(0, W - delay) * vmax      # remaining travel budget
+        sigma     = min_sigma + reach / 2         # Gaussian std (anisotropic)
+        influence = exp(-dist(drift, cell)^2 / (2 * sigma^2))
+
+    Returns (P, N) influences in [0, 1] (peak = 1 at each player's drifted
+    position). Shape (0, N) if P == 0.
     """
-    att, _ = _ppcf_vectorized_surfaces(
-        targets,
-        att_pos, att_vel, att_gk, att_facing,
-        def_pos, def_vel, def_gk, def_facing,
-        ball_pos, params,
-    )
-    return att
+    P = len(pos)
+    N = len(targets)
+    if P == 0:
+        return np.zeros((0, N))
+
+    W = params["max_int_time"]
+    vmax = params["max_player_speed"]
+    min_sigma = params["blob_min_sigma"]
+
+    # Theta per (player, cell) — drives the delay anisotropy
+    theta = _theta_player_to_targets(pos, facing, targets)  # (P, N)
+
+    # Orientation-aware reaction + COD delay per (player, cell)
+    delay = reaction_delay(theta, params)  # (P, N)
+
+    # Drift during delay: each player continues current velocity until
+    # they have reoriented and can start moving toward the target.
+    drift_x = pos[:, 0:1] + vel[:, 0:1] * delay  # (P, N)
+    drift_y = pos[:, 1:2] + vel[:, 1:2] * delay
+
+    # Distance from drifted position to target
+    dx = targets[None, :, 0] - drift_x
+    dy = targets[None, :, 1] - drift_y
+    dist = np.sqrt(dx * dx + dy * dy)
+
+    # Remaining reach budget and Gaussian sigma
+    reach = np.maximum(0.0, W - delay) * vmax
+    sigma = min_sigma + reach / 2.0
+
+    # Anisotropic Gaussian
+    return np.exp(-(dist * dist) / (2.0 * sigma * sigma))
 
 
-# --- Frame extraction -----------------------------------------------------
+# ── Frame extraction ──────────────────────────────────────────────────────
 
 def _extract_team_arrays(
     frame_df: pd.DataFrame,
     team_id: int,
-    gk_jerseys: Dict[int, int],
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Pull (pos, vel, is_gk, facing) arrays for one team from a frame."""
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Pull (pos, vel, facing) arrays for one team from a single-frame
+    orientations DataFrame.
+
+    Expected columns: team, x, y, shoulder_angle, [vx, vy].
+    """
     df = frame_df[frame_df["team"] == team_id]
     if len(df) == 0:
-        return (np.zeros((0, 2)), np.zeros((0, 2)),
-                np.zeros(0, dtype=bool), np.zeros(0))
+        return np.zeros((0, 2)), np.zeros((0, 2)), np.zeros(0)
 
     pos = df[["x", "y"]].values.astype(np.float64)
 
@@ -375,50 +229,69 @@ def _extract_team_arrays(
     else:
         facing = np.zeros(len(df))
 
-    gk_j = gk_jerseys.get(team_id, 1)
-    is_gk = (df["jersey"].values == gk_j)
-
-    return pos, vel, is_gk, facing
+    return pos, vel, facing
 
 
-# --- Public API -----------------------------------------------------------
+# ── PPCF aggregation (per-team normalized shares) ─────────────────────────
 
-def compute_ppcf(
+def _aggregate_team_shares(
+    I_att: np.ndarray,
+    I_def: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Convert raw influence sums into ppcf shares.
+
+    Interpretation:
+        resolved    = 1 - exp(-(I_att + I_def))        # [0, 1]
+        ppcf_att    = resolved * I_att / (I_att + I_def)
+        ppcf_def    = resolved * I_def / (I_att + I_def)
+
+    Properties:
+        0 <= ppcf_att, ppcf_def
+        ppcf_att + ppcf_def = resolved <= 1
+        (1 - resolved) is the "unresolved" mass: cells no player reaches.
+    """
+    total = I_att + I_def
+    with np.errstate(divide="ignore", invalid="ignore"):
+        frac_att = np.where(total > 1e-12, I_att / total, 0.0)
+        frac_def = np.where(total > 1e-12, I_def / total, 0.0)
+    resolved = 1.0 - np.exp(-total)
+    return resolved * frac_att, resolved * frac_def
+
+
+# ── Public API ────────────────────────────────────────────────────────────
+
+def compute_ppcf_surfaces(
     orientations_frame: pd.DataFrame,
     attacking_team: int,
-    ball_xy: Tuple[float, float],
-    gk_jerseys: Optional[Dict[int, int]] = None,
     params: Optional[dict] = None,
     n_grid_x: int = 50,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Compute Immediate Orientation-Aware PPCF surface for one frame.
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Compute Immediate Orientation-Aware PPCF reach-field surfaces.
 
     Args:
         orientations_frame: Single-frame slice of an orientations DataFrame
             (as produced by orientation.compute_orientations + add_dynamics).
-            Must contain columns: team, jersey, x, y, shoulder_angle.
-            Velocity columns (vx, vy) optional but strongly recommended.
+            Must contain columns: team, x, y, shoulder_angle. Velocity
+            columns (vx, vy) are optional but strongly recommended.
         attacking_team: Team ID of the attacking team (0 or 1).
-        ball_xy: (x, y) ball position in meters, centered pitch.
-        gk_jerseys: {team_id: gk_jersey_number}. Default {0:1, 1:1}.
-        params: Model parameters from default_params(). Default if None.
+        params: Parameters from default_params(). Default if None.
         n_grid_x: Grid resolution in the longitudinal direction. Default 50.
 
     Returns:
-        (ppcf_att, xgrid, ygrid):
-            ppcf_att: (n_grid_y, n_grid_x) array in [0, 1].
-            xgrid: (n_grid_x,) longitudinal cell centers in meters.
-            ygrid: (n_grid_y,) lateral cell centers in meters.
+        (ppcf_att, ppcf_def, xgrid, ygrid):
+            ppcf_att, ppcf_def: (n_grid_y, n_grid_x) arrays in [0, 1]
+                representing each team's share of resolved control. Their
+                sum is `resolved` = fraction of the cell where any player
+                has influence; 1 - sum is unresolved (nobody reaches).
+            xgrid, ygrid: (n_grid_x,), (n_grid_y,) cell centers in meters.
     """
     if params is None:
         params = default_params()
-    if gk_jerseys is None:
-        gk_jerseys = {0: 1, 1: 1}
 
-    required = {"team", "jersey", "x", "y", "shoulder_angle"}
+    required = {"team", "x", "y", "shoulder_angle"}
     missing = required - set(orientations_frame.columns)
     if missing:
-        raise ValueError(f"orientations_frame missing columns: {missing}")
+        raise ValueError(f"orientations_frame missing columns: {sorted(missing)}")
 
     # Grid (centered meters)
     n_grid_y = int(round(n_grid_x * PITCH_WIDTH / PITCH_LENGTH))
@@ -430,73 +303,22 @@ def compute_ppcf(
     targets = np.column_stack([xx.ravel(), yy.ravel()])
 
     defending_team = 1 - attacking_team
-    att = _extract_team_arrays(orientations_frame, attacking_team, gk_jerseys)
-    def_ = _extract_team_arrays(orientations_frame, defending_team, gk_jerseys)
+    att_pos, att_vel, att_facing = _extract_team_arrays(orientations_frame, attacking_team)
+    def_pos, def_vel, def_facing = _extract_team_arrays(orientations_frame, defending_team)
 
-    ppcf_flat = _ppcf_vectorized(
-        targets,
-        att[0], att[1], att[2], att[3],
-        def_[0], def_[1], def_[2], def_[3],
-        np.asarray(ball_xy, dtype=np.float64),
-        params,
-    )
-    return ppcf_flat.reshape(n_grid_y, n_grid_x), xgrid, ygrid
+    att_infl = _player_influence(att_pos, att_vel, att_facing, targets, params)
+    def_infl = _player_influence(def_pos, def_vel, def_facing, targets, params)
 
+    I_att_flat = att_infl.sum(axis=0) if len(att_infl) else np.zeros(len(targets))
+    I_def_flat = def_infl.sum(axis=0) if len(def_infl) else np.zeros(len(targets))
 
-def compute_ppcf_surfaces(
-    orientations_frame: pd.DataFrame,
-    attacking_team: int,
-    ball_xy: Tuple[float, float],
-    gk_jerseys: Optional[Dict[int, int]] = None,
-    params: Optional[dict] = None,
-    n_grid_x: int = 50,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Compute BOTH Immediate PPCF surfaces (attacker and defender) for one
-    frame.
+    ppcf_att_flat, ppcf_def_flat = _aggregate_team_shares(I_att_flat, I_def_flat)
 
-    Unlike compute_ppcf(), this returns the two raw probability mass
-    surfaces separately so that downstream viz can distinguish
-    'defender dominates' (ppcf_def ~ 1) from 'nobody resolves control in
-    the window' (ppcf_att + ppcf_def ~ 0). The sum ppcf_att + ppcf_def
-    is the 'resolved mass' in [0, 1]; 1 - (att + def) is unresolved
-    (attacker neither wins nor loses in the immediate horizon).
-
-    Returns:
-        (ppcf_att, ppcf_def, xgrid, ygrid), each grid shape (n_grid_y, n_grid_x).
-    """
-    if params is None:
-        params = default_params()
-    if gk_jerseys is None:
-        gk_jerseys = {0: 1, 1: 1}
-
-    required = {"team", "jersey", "x", "y", "shoulder_angle"}
-    missing = required - set(orientations_frame.columns)
-    if missing:
-        raise ValueError(f"orientations_frame missing columns: {missing}")
-
-    n_grid_y = int(round(n_grid_x * PITCH_WIDTH / PITCH_LENGTH))
-    dx = PITCH_LENGTH / n_grid_x
-    dy = PITCH_WIDTH / n_grid_y
-    xgrid = np.arange(n_grid_x) * dx - PITCH_LENGTH / 2.0 + dx / 2.0
-    ygrid = np.arange(n_grid_y) * dy - PITCH_WIDTH / 2.0 + dy / 2.0
-    xx, yy = np.meshgrid(xgrid, ygrid)
-    targets = np.column_stack([xx.ravel(), yy.ravel()])
-
-    defending_team = 1 - attacking_team
-    att = _extract_team_arrays(orientations_frame, attacking_team, gk_jerseys)
-    def_ = _extract_team_arrays(orientations_frame, defending_team, gk_jerseys)
-
-    att_flat, def_flat = _ppcf_vectorized_surfaces(
-        targets,
-        att[0], att[1], att[2], att[3],
-        def_[0], def_[1], def_[2], def_[3],
-        np.asarray(ball_xy, dtype=np.float64),
-        params,
-    )
     return (
-        att_flat.reshape(n_grid_y, n_grid_x),
-        def_flat.reshape(n_grid_y, n_grid_x),
-        xgrid, ygrid,
+        ppcf_att_flat.reshape(n_grid_y, n_grid_x),
+        ppcf_def_flat.reshape(n_grid_y, n_grid_x),
+        xgrid,
+        ygrid,
     )
 
 
@@ -504,38 +326,39 @@ def ppcf_at_targets(
     orientations_frame: pd.DataFrame,
     targets_xy: np.ndarray,
     attacking_team: int,
-    ball_xy: Tuple[float, float],
-    gk_jerseys: Optional[Dict[int, int]] = None,
     params: Optional[dict] = None,
-) -> np.ndarray:
-    """Compute PPCF_att at specific target positions (point-wise).
+) -> Tuple[np.ndarray, np.ndarray]:
+    """PPCF shares at specific target positions (point-wise API).
 
-    Much faster than compute_ppcf for a handful of targets (e.g. pass
-    options, receiver positions, DOS sampling).
+    Faster than compute_ppcf_surfaces for a handful of targets (e.g. pass
+    options, receiver positions, DOS sampling at pass destinations).
 
     Args:
-        targets_xy: (N, 2) array of positions in meters.
+        orientations_frame: Single-frame orientations slice.
+        targets_xy: (N, 2) positions in meters. Accepts 1D (2,) as a
+            shortcut for a single point.
+        attacking_team: Team ID (0 or 1).
+        params: Default if None.
 
     Returns:
-        (N,) PPCF_att in [0, 1].
+        (ppcf_att, ppcf_def) each shape (N,) in [0, 1]. See
+        compute_ppcf_surfaces for semantics.
     """
     if params is None:
         params = default_params()
-    if gk_jerseys is None:
-        gk_jerseys = {0: 1, 1: 1}
 
     targets = np.asarray(targets_xy, dtype=np.float64)
     if targets.ndim == 1:
         targets = targets[None, :]
 
     defending_team = 1 - attacking_team
-    att = _extract_team_arrays(orientations_frame, attacking_team, gk_jerseys)
-    def_ = _extract_team_arrays(orientations_frame, defending_team, gk_jerseys)
+    att_pos, att_vel, att_facing = _extract_team_arrays(orientations_frame, attacking_team)
+    def_pos, def_vel, def_facing = _extract_team_arrays(orientations_frame, defending_team)
 
-    return _ppcf_vectorized(
-        targets,
-        att[0], att[1], att[2], att[3],
-        def_[0], def_[1], def_[2], def_[3],
-        np.asarray(ball_xy, dtype=np.float64),
-        params,
-    )
+    att_infl = _player_influence(att_pos, att_vel, att_facing, targets, params)
+    def_infl = _player_influence(def_pos, def_vel, def_facing, targets, params)
+
+    I_att = att_infl.sum(axis=0) if len(att_infl) else np.zeros(len(targets))
+    I_def = def_infl.sum(axis=0) if len(def_infl) else np.zeros(len(targets))
+
+    return _aggregate_team_shares(I_att, I_def)

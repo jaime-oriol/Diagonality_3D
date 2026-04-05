@@ -13,7 +13,7 @@ TF15 doc says "cm" but actual parquet values are METERS.
 import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -236,15 +236,6 @@ def load_ball_frames(
     ])
 
 
-def load_skeleton_at_frame(
-    match: str,
-    frame: int,
-    parts: Optional[set] = ORIENTATION_PARTS,
-) -> pd.DataFrame:
-    """Convenience: load a single frame of skeleton data."""
-    return load_skeleton_frames(match, frame, frame, parts)
-
-
 # --- Frame mapping: Positions 25Hz (SyncedFrameId) <-> Skeleton 50Hz ------
 
 def synced_frame_to_parquet(
@@ -261,27 +252,6 @@ def synced_frame_to_parquet(
     phase_start = metadata["phases"][half][0]
     n_start = 10001 if half == 1 else 100001
     return phase_start + 1 + (synced_frame_id - n_start) * 2
-
-
-def parquet_to_synced_frame(
-    parquet_frame: int,
-    metadata: Dict,
-    half: int = 1,
-) -> int:
-    """Convert a parquet frame_number (50Hz) to a SyncedFrameId (25Hz)."""
-    phase_start = metadata["phases"][half][0]
-    n_start = 10001 if half == 1 else 100001
-    return n_start + (parquet_frame - phase_start - 1) // 2
-
-
-def frame_to_seconds(
-    frame: int,
-    metadata: Dict,
-    half: int = 1,
-) -> float:
-    """Convert a parquet frame to seconds elapsed in the half."""
-    phase_start = metadata["phases"][half][0]
-    return (frame - phase_start) / metadata["framerate"]
 
 
 # --- AdvancedEvents (kpi_data XML) ----------------------------------------
@@ -550,31 +520,3 @@ def compute_attacking_right(attacking_team: int, half: int, home_gk_left_p1: boo
         return (attacking_team == 1) != home_gk_left_p1
 
 
-def get_match_list() -> List[str]:
-    """Return list of available match folder names."""
-    return list(MATCHES.keys())
-
-
-def get_match_summary() -> pd.DataFrame:
-    """Return summary DataFrame of all matches with metadata."""
-    rows = []
-    for match in MATCHES:
-        meta = load_metadata(match)
-        p1 = meta["phases"].get(1, (0, 0))
-        p2 = meta["phases"].get(2, (0, 0))
-        p1_dur = (p1[1] - p1[0]) / meta["framerate"]
-        p2_dur = (p2[1] - p2[0]) / meta["framerate"]
-
-        pf = pq.ParquetFile(_parquet_path(match))
-
-        rows.append({
-            "match": match,
-            "game_id": meta["game_id"],
-            "kickoff": meta["kickoff"],
-            "framerate": meta["framerate"],
-            "pitch": f"{meta['pitch_x']:.0f}x{meta['pitch_y']:.1f}m",
-            "total_frames": pf.metadata.num_rows,
-            "p1_duration_min": p1_dur / 60,
-            "p2_duration_min": p2_dur / 60,
-        })
-    return pd.DataFrame(rows)

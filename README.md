@@ -17,7 +17,6 @@ Do diagonal actions — passes, carries and off-ball runs — systematically exp
 ```
 Diagonality_3D/
 ├── docs/                        # Research and data documentation (git-ignored)
-│   ├── CHECKPOINT.md            # Full project state snapshot
 │   ├── propuesta_final.md       # Full project proposal
 │   ├── hackathon_data.md        # Complete data inventory (verified)
 │   ├── diagonality.md           # Spielverlagerung tactical theory
@@ -29,14 +28,18 @@ Diagonality_3D/
 │   ├── preprocess.py            # Per-match cache extraction
 │   ├── orientation.py           # Head/shoulder/hip orientation from keypoints
 │   ├── vision.py                # Vision model (adapted Bekkers)
-│   ├── theta.py                 # Theta computation per event (passes, carries)
+│   ├── theta.py                 # Theta per event (passes, carries)
 │   ├── ddef.py                  # D-Def: defensive disruption (Goes et al.)
-│   └── viz/                     # Visualization package (common, vision_plot)
+│   ├── ppcf.py                  # Immediate Orientation-Aware PPCF (reach fields)
+│   └── viz/                     # Visualization package
+│       ├── common.py            # Shared style constants + colormaps
+│       ├── vision_plot.py       # Vision map renderer
+│       └── ppcf_plot.py         # PPCF reach-field renderer
 │
 ├── cache/                       # Git-ignored (preprocessed per match)
 ├── data/                        # Git-ignored (~20GB hackathon data)
 ├── references/                  # Git-ignored (Bekkers code)
-├── test/                        # Git-ignored
+├── test/                        # Git-ignored (test_ppcf.py + render scripts)
 └── figures/                     # Pre-rendered outputs
 ```
 
@@ -52,7 +55,7 @@ The analysis runs as a four-stage pipeline:
 
 **Stage 3 — Defensive Disruption with Orientation.** Reimplement D-Def (Goes et al. 2019) decomposed into longitudinal (PC1) and lateral (PC2) disruption. Cross with theta to show that diagonal actions (high theta) disrupt BOTH axes simultaneously, while orthogonal actions only disrupt one.
 
-**Stage 4 — Orientation-Aware Pitch Control and Diagonal Opportunity Surfaces.** Extend Spearman's (2018) PPCF by modulating defender reaction time as a function of theta. Compute Diagonal Opportunity Surfaces showing where on the pitch a diagonal action gains the most control advantage.
+**Stage 4 — Immediate Orientation-Aware PPCF and Diagonal Opportunity Surfaces.** Each player is modelled as an anisotropic Gaussian reach field centred on themselves, with sigma derived from the orientation-aware biomechanical delay: Vater (2024) reaction time + Dos'Santos (2018) change-of-direction deficit, applied to the real shoulder angle from the 3D skeleton. A defender with the ball in their blind spot literally has a hole in their reach field, and diagonals exploit it. From this, compute Diagonal Opportunity Surfaces showing where on the pitch a diagonal action gains the most control advantage.
 
 ---
 
@@ -67,8 +70,10 @@ See [docs/hackathon_data.md](docs/hackathon_data.md) for full data inventory.
 ## References
 
 - Spielverlagerung (2025) — Tactical Theory: Diagonality
-- Bekkers (SSAC 2026) — Wide Open Gazes: vision model with pose data
+- Bekkers (SSAC 2026) — Wide Open Gazes: vision model + imminent pitch control
 - Spearman (2018) — PPCF: Probabilistic Pitch Control Function
+- Fernández & Bornn (2018) — Wide Open Spaces: influence-field pitch control
 - Goes et al. (2019) — D-Def: defensive disruption metric
 - Forcher et al. (2021) — D-Def validation: diagonal passes in successful attacks
 - Vater (2024) — Reaction time grows with visual eccentricity
+- Dos'Santos (2018) — Change-of-direction deficit quantification

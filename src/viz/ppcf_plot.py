@@ -2,21 +2,23 @@
 ppcf_plot — Render Immediate Orientation-Aware PPCF on pitch.
 
 Opta Forum aesthetic (dark BG, blue/red divergent cmap, Opta player markers)
-adapted to immediate PPCF semantics: alpha is modulated by contrast from the
-neutral point 0.5, so only cells where a team genuinely dominates in the
-short window are painted. Cells where neither team resolves control within
-the immediate horizon fade to transparent, letting the pitch BG show.
+paired with the reach-field PPCF: each player contributes an anisotropic
+Gaussian blob whose sigma is derived from orientation-aware reach (Vater RT
++ Dos'Santos COD applied to the real shoulder angle). The blobs are summed
+per team and converted into ppcf shares.
 
-This is the visual signature of "immediate, not global" — we don't paint the
-whole pitch in asymptotic colors; we paint the zones where orientation and
-reaction time actually decide control in the next ~1 second.
+Rendering semantics:
+    - color comes from which team dominates the cell (ratio of att to total)
+    - alpha comes from the resolved mass at the cell (both teams combined)
+    - cells with zero influence from any player fade to the pitch BG
+A defender's blob has a visible hole in their blind spot — the literal
+image of the diagonality thesis.
 """
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
-import matplotlib.colors as mcolors
 from matplotlib.patches import Wedge
 from mplsoccer import Pitch
 
@@ -33,12 +35,12 @@ MS = 20  # Opta-style large markers for overlay contrast
 
 def plot_ppcf_frame(
     orientations_frame: pd.DataFrame,
-    ball_xy: tuple,
     attacking_team: int,
+    ball_xy: tuple = None,
     gk_jerseys: dict = None,
     ppcf_att: np.ndarray = None,
     ppcf_def: np.ndarray = None,
-    immediate_window: float = 0.8,
+    immediate_window: float = 1.0,
     n_grid_x: int = 100,
     alpha_max: float = 0.75,
     title: str = "",
@@ -46,25 +48,29 @@ def plot_ppcf_frame(
     save_path: str = None,
     figsize: tuple = (16, 10.4),
 ) -> plt.Figure:
-    """Render one frame with immediate PPCF heatmap + players + ball.
+    """Render one frame with reach-field PPCF heatmap + players + ball.
 
-    Alpha semantics (the immediate signature):
-        alpha_per_cell = (ppcf_att + ppcf_def) * alpha_max
-    So unresolved cells (nobody reaches in the window) have alpha=0 and
-    show the pitch BG through. Resolved cells paint from red (defender)
-    through gray (contested) to blue (attacker), with opacity equal to how
-    much probability mass has actually been resolved in the window.
+    Alpha = (ppcf_att + ppcf_def) * alpha_max (the resolved mass at the
+    cell). Cells with zero influence fade to the pitch BG.
+    Color = ratio of attacker share to total resolved, mapped through
+    PPCF_CMAP (red = defender dominant, gray = contested, blue = attacker
+    dominant).
 
     Args:
-        orientations_frame: Single-frame slice (output of add_dynamics).
-            Must have team, jersey, x, y, shoulder_angle, head_angle,
-            shoulder_width, vx, vy.
-        ball_xy: (x, y) ball position in meters.
+        orientations_frame: Single-frame slice of an orientations DataFrame
+            (from compute_orientations + add_dynamics). Must have columns:
+            team, jersey, x, y, shoulder_angle. For nicer rendering also:
+            head_angle, shoulder_width, vx, vy.
         attacking_team: Team ID of attacking team (0 or 1).
-        gk_jerseys: {team_id: jersey}. Default {0:1, 1:1}.
-        ppcf_att, ppcf_def: Pre-computed surfaces from compute_ppcf_surfaces.
-            If None, computed inside.
-        immediate_window: Integration horizon in seconds. Default 0.8s.
+        ball_xy: Optional (x, y) ball position in meters for drawing the
+            ball marker. NOT used by the PPCF computation (reach model
+            is ball-independent; the ball position is implicit in each
+            player's shoulder angle).
+        gk_jerseys: {team_id: jersey} for drawing GKs in black. Default
+            {0: 1, 1: 1}. Not used by the math.
+        ppcf_att, ppcf_def: Pre-computed reach-field shares from
+            compute_ppcf_surfaces(). If None, computed inside.
+        immediate_window: Integration horizon in seconds. Default 1.0s.
         n_grid_x: Grid resolution. Default 100 (~1m cells).
         alpha_max: Peak alpha for fully-resolved cells. Default 0.75.
     """
@@ -75,8 +81,8 @@ def plot_ppcf_frame(
     if ppcf_att is None or ppcf_def is None:
         params = default_params(immediate_window=immediate_window)
         ppcf_att, ppcf_def, _, _ = compute_ppcf_surfaces(
-            orientations_frame, attacking_team, ball_xy,
-            gk_jerseys=gk_jerseys, params=params, n_grid_x=n_grid_x,
+            orientations_frame, attacking_team,
+            params=params, n_grid_x=n_grid_x,
         )
 
     # Figure / axis
@@ -88,18 +94,19 @@ def plot_ppcf_frame(
     pitch = Pitch(**PKW)
     pitch.draw(ax=ax)
 
-    # Resolved mass = fraction of probability mass the model has decided
-    # within the window (0 = nobody reaches, 1 = fully contested/decided).
-    # This is the alpha channel: unresolved -> transparent -> field BG.
+    # Resolved mass: how much control the reach-field has assigned to the
+    # cell (0 = nobody reaches, ~1 = at least one player clearly dominates).
+    # This is the alpha channel — unresolved cells fade to field BG.
     resolved = np.clip(ppcf_att + ppcf_def, 0.0, 1.0)
     alpha = resolved * alpha_max
 
-    # Color from att-def difference in [-1, 1], mapped to [0, 1] cmap domain
-    # (0 -> red/def, 0.5 -> gray, 1 -> blue/att).
-    winner = np.clip(ppcf_att - ppcf_def, -1.0, 1.0)
-    color_idx = 0.5 + 0.5 * winner
+    # Color: share of attacker over total resolved.
+    # 0 = pure defender (red), 0.5 = contested (gray), 1 = pure attacker (blue).
+    total = ppcf_att + ppcf_def
+    with np.errstate(divide="ignore", invalid="ignore"):
+        color_idx = np.where(total > 1e-9, ppcf_att / total, 0.5)
 
-    rgba = PPCF_CMAP(color_idx)
+    rgba = PPCF_CMAP(np.clip(color_idx, 0.0, 1.0))
     rgba[..., 3] = alpha
 
     ax.imshow(

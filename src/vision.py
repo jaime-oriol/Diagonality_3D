@@ -53,9 +53,6 @@ class Vision:
     smoothing_multiplier: float = 3.0
 
     def __post_init__(self):
-        # Depth = half of width (front-to-back body thickness)
-        self.human_depth = self.human_width / 2.0
-
         grid_length = self.pitch_length * self.smoothing_multiplier
         grid_width = self.pitch_width * self.smoothing_multiplier
 
@@ -273,27 +270,3 @@ def compute_player_vision(player_x, player_y, head_angle, speed,
                      np.asarray(other_y, dtype=float),
                      np.asarray(other_shoulder_angles, dtype=float),
                      sw)
-
-
-def compute_team_vision(orientations_frame, team, smoothing=3.0):
-    """Compute combined vision for a team. Uses real per-occluder shoulder widths."""
-    all_p = orientations_frame
-    team_p = all_p[all_p["team"] == team]
-    dummy = Vision(x=0, y=0, head_angle=0, speed=0, smoothing_multiplier=smoothing)
-    combined = np.zeros_like(dummy.grid)
-    grids = {}
-    for _, p in team_p.iterrows():
-        j = int(p["jersey"])
-        others = all_p[all_p.index != p.name]
-        if len(others) == 0: continue
-        # Real per-occluder shoulder widths from skeleton data
-        other_sw = others["shoulder_width"].values if "shoulder_width" in others.columns else None
-        g = compute_player_vision(
-            p["x"], p["y"], p["head_angle"],
-            p.get("speed", 0.0) if not np.isnan(p.get("speed", 0.0)) else 0.0,
-            others["x"].values, others["y"].values,
-            others["shoulder_angle"].values,
-            other_shoulder_widths=other_sw, smoothing=smoothing)
-        grids[j] = g
-        combined = 1.0 - (1.0 - combined) * (1.0 - g)
-    return {"grids": grids, "combined": combined, "blind_spots": 1.0 - combined}
