@@ -14,7 +14,8 @@ For each player i and target cell x:
                   cod(θ) = A * sin^2(θ / 2)                         # Dos'Santos 2018
     drift_i(x) = pos_i + vel_i * delay_i(x)                         # where player is when ready
     reach_i(x) = max(0, W - delay_i(x)) * vmax                      # remaining travel budget
-    sigma_i(x) = min_sigma + reach_i(x) / 2                         # anisotropic Gaussian std
+    factor_i(x) = reach_i(x) / max_reach                             # [0, 1] orientation factor
+    sigma_i(x) = sigma_base * (0.5 + 0.5 * factor_i(x))             # base ±50% modulation
     infl_i(x)  = exp(-||x - drift_i(x)||^2 / (2 * sigma_i(x)^2))    # in [0, 1]
 
 Per-team control (aggregation):
@@ -25,8 +26,8 @@ Per-team control (aggregation):
 
 The blob of each player is naturally anisotropic: stretched in the
 direction they face (theta=0 -> low delay -> big reach -> big sigma)
-and compressed in their blind spot (theta=pi -> big delay -> reach=0 ->
-sigma=min_sigma). A defender with the ball in his back literally has a
+and compressed in their blind spot (theta=pi -> big delay -> low reach ->
+sigma compressed to 50% of base). A defender with the ball in his back has a
 hole in his control field on that side — the diagonality thesis made
 visible on a per-player basis.
 
@@ -52,14 +53,15 @@ PITCH_WIDTH = 68.0
 
 # ── Default parameters ────────────────────────────────────────────────────
 
-def default_params(immediate_window: float = 1.0) -> dict:
+def default_params(immediate_window: float = 2.5) -> dict:
     """Default parameters for the reach-field PPCF.
 
     Args:
-        immediate_window: Integration horizon in seconds. Default 1.0.
+        immediate_window: Integration horizon in seconds. Default 2.5.
             Calibrated so a well-oriented player (theta=0) has reach
-            ~1.5m after the 0.7s baseline reaction, while blind-spot
-            directions (theta >= 90°) have reach 0.
+            ~9m (sigma = sigma_base), while blind-spot directions
+            (theta=pi) still have ~3m reach (sigma compressed to ~50%
+            of sigma_base). Orientation modulates the SHAPE, not existence.
     """
     return {
         # Physical reach bounds
@@ -78,11 +80,13 @@ def default_params(immediate_window: float = 1.0) -> dict:
         "cod_amplitude": 0.8,
 
         # Blob geometry
-        # Minimum Gaussian sigma in meters — physical footprint of a
-        # stationary player (half body width + lateral arm reach). Floors
-        # the blob so even blind-spot directions keep a tiny bubble on
-        # the player's own position.
-        "blob_min_sigma": 0.6,
+        # sigma_base: base radius (meters) of each player's blob. 7m
+        # produces blobs comparable to Bekkers' c_in=0.5 imminent PC.
+        "blob_sigma_base": 7.0,
+        # orientation_mod: how much orientation modulates the base radius.
+        # 0.5 = ±50% — blind spot compresses to 50% of base, facing
+        # direction stays at 100%. Gives ~3x influence ratio at 8m.
+        "blob_orientation_mod": 0.5,
     }
 
 
@@ -161,7 +165,7 @@ def _player_influence(
         delay     = rt(theta) + cod(theta)
         drift     = pos + vel * delay             # where player is when ready
         reach     = max(0, W - delay) * vmax      # remaining travel budget
-        sigma     = min_sigma + reach / 2         # Gaussian std (anisotropic)
+        sigma     = sigma_base * ((1-mod) + mod * reach/max_reach)  # base ±50%
         influence = exp(-dist(drift, cell)^2 / (2 * sigma^2))
 
     Returns (P, N) influences in [0, 1] (peak = 1 at each player's drifted
@@ -174,7 +178,6 @@ def _player_influence(
 
     W = params["max_int_time"]
     vmax = params["max_player_speed"]
-    min_sigma = params["blob_min_sigma"]
 
     # Theta per (player, cell) — drives the delay anisotropy
     theta = _theta_player_to_targets(pos, facing, targets)  # (P, N)
@@ -192,9 +195,20 @@ def _player_influence(
     dy = targets[None, :, 1] - drift_y
     dist = np.sqrt(dx * dx + dy * dy)
 
-    # Remaining reach budget and Gaussian sigma
+    # Reach budget (physical meters the player can cover after reacting)
     reach = np.maximum(0.0, W - delay) * vmax
-    sigma = min_sigma + reach / 2.0
+    max_reach = (W - params["rt_base"]) * vmax  # best-case reach (theta=0)
+
+    # Sigma: base radius modulated by orientation.
+    # Every player has a substantial blob (sigma_base ~7m, like a normal
+    # PPCF). Orientation modulates the shape by ±50%: facing forward
+    # stretches to sigma_base, blind spot compresses to 50% of sigma_base.
+    # This produces Bekkers-like blobs where the orientation DEFORMS the
+    # shape rather than eliminating the back.
+    sigma_base = params["blob_sigma_base"]
+    orientation_mod = params["blob_orientation_mod"]
+    orientation_factor = np.clip(reach / (max_reach + 1e-9), 0.0, 1.0)
+    sigma = sigma_base * ((1 - orientation_mod) + orientation_mod * orientation_factor)
 
     # Anisotropic Gaussian
     return np.exp(-(dist * dist) / (2.0 * sigma * sigma))

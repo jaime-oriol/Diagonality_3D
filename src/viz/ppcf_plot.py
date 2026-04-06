@@ -25,7 +25,7 @@ from mplsoccer import Pitch
 from ..ppcf import compute_ppcf_surfaces, default_params
 from .common import (
     BG, WHITE, PKW, PPCF_CMAP,
-    ATT as ATT_C, ATT_LIGHT, DEF as DEF_C, DEF_LIGHT,
+    ATT as ATT_C, DEF as DEF_C,
     GK as GK_C, BALL as BALL_C,
 )
 
@@ -40,9 +40,9 @@ def plot_ppcf_frame(
     gk_jerseys: dict = None,
     ppcf_att: np.ndarray = None,
     ppcf_def: np.ndarray = None,
-    immediate_window: float = 1.0,
+    immediate_window: float = None,
     n_grid_x: int = 100,
-    alpha_max: float = 0.75,
+    alpha_max: float = 0.95,
     title: str = "",
     ax: plt.Axes = None,
     save_path: str = None,
@@ -70,16 +70,20 @@ def plot_ppcf_frame(
             {0: 1, 1: 1}. Not used by the math.
         ppcf_att, ppcf_def: Pre-computed reach-field shares from
             compute_ppcf_surfaces(). If None, computed inside.
-        immediate_window: Integration horizon in seconds. Default 1.0s.
+        immediate_window: Override integration horizon (s). Default None
+            = use default_params() (2.5s).
         n_grid_x: Grid resolution. Default 100 (~1m cells).
-        alpha_max: Peak alpha for fully-resolved cells. Default 0.75.
+        alpha_max: Peak alpha for fully-resolved cells. Default 0.95.
     """
     if gk_jerseys is None:
         gk_jerseys = {0: 1, 1: 1}
 
     # Compute surfaces if not provided
     if ppcf_att is None or ppcf_def is None:
-        params = default_params(immediate_window=immediate_window)
+        if immediate_window is not None:
+            params = default_params(immediate_window=immediate_window)
+        else:
+            params = default_params()
         ppcf_att, ppcf_def, _, _ = compute_ppcf_surfaces(
             orientations_frame, attacking_team,
             params=params, n_grid_x=n_grid_x,
@@ -96,7 +100,8 @@ def plot_ppcf_frame(
 
     # Resolved mass: how much control the reach-field has assigned to the
     # cell (0 = nobody reaches, ~1 = at least one player clearly dominates).
-    # This is the alpha channel — unresolved cells fade to field BG.
+    # Linear alpha: intense center, natural fade at edges. No sqrt boost
+    # (which makes everything uniformly faint). Higher alpha_max compensates.
     resolved = np.clip(ppcf_att + ppcf_def, 0.0, 1.0)
     alpha = resolved * alpha_max
 
@@ -144,18 +149,15 @@ def plot_ppcf_frame(
                 solid_capstyle="round",
             )
 
-        # Head wedge (gaze direction) — shown for ALL players, GKs included
+        # Head wedge (gaze direction) — white for all players so it stands
+        # out against the team-colored PPCF blob underneath
         ha = p.get("head_angle", np.nan)
         if not (isinstance(ha, float) and np.isnan(ha)):
-            if is_gk:
-                head_color = WHITE
-            else:
-                head_color = ATT_LIGHT if t == attacking_team else DEF_LIGHT
             wedge = Wedge(
-                (x, y), 5.5,
+                (x, y), 3.5,
                 np.degrees(ha) - 22.5,
                 np.degrees(ha) + 22.5,
-                color=head_color, alpha=0.5, zorder=3,
+                color=WHITE, alpha=0.45, zorder=3,
             )
             ax.add_patch(wedge)
 
@@ -163,6 +165,21 @@ def plot_ppcf_frame(
         ax.text(x, y, str(j), color=WHITE, fontsize=8,
                 ha="center", va="center", fontweight="bold", zorder=6,
                 path_effects=PE_S)
+
+    # --- Velocity arrows (Opta Forum style quiver) ---
+    if "vx" in orientations_frame.columns and "vy" in orientations_frame.columns:
+        for team_id, team_color in [(attacking_team, ATT_C),
+                                     (1 - attacking_team, DEF_C)]:
+            tdf = orientations_frame[orientations_frame["team"] == team_id]
+            valid = tdf.dropna(subset=["vx", "vy"])
+            if not valid.empty:
+                ax.quiver(
+                    valid["x"].values, valid["y"].values,
+                    valid["vx"].values, valid["vy"].values,
+                    color=team_color, scale=120, scale_units="width",
+                    width=0.003, headwidth=3.5, headlength=4,
+                    headaxislength=3.5, alpha=0.55, zorder=3,
+                )
 
     # --- Ball ---
     if ball_xy is not None and not (np.isnan(ball_xy[0]) or np.isnan(ball_xy[1])):
