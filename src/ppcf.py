@@ -80,7 +80,7 @@ def default_params(immediate_window: float = 2.5) -> dict:
         "cod_amplitude": 0.8,
 
         # Blob geometry
-        # sigma_base: base radius (meters) of each player's blob. 7m
+        # sigma_base: base radius (meters) of each player's blob. 6.5m
         # produces blobs comparable to Bekkers' c_in=0.5 imminent PC.
         "blob_sigma_base": 6.5,
         # orientation_mod: how much orientation modulates the base radius.

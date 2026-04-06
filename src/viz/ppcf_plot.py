@@ -73,7 +73,7 @@ def plot_ppcf_frame(
         immediate_window: Override integration horizon (s). Default None
             = use default_params() (2.5s).
         n_grid_x: Grid resolution. Default 100 (~1m cells).
-        alpha_max: Peak alpha for fully-resolved cells. Default 0.95.
+        alpha_max: Peak alpha for fully-resolved cells. Default 1.0.
     """
     if gk_jerseys is None:
         gk_jerseys = {0: 1, 1: 1}

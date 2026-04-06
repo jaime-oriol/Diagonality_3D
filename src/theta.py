@@ -1,5 +1,5 @@
 """
-theta — Compute orientation-threat metrics for passes, carries, and receptions.
+theta — Compute orientation-threat metrics for passes and carries.
 
 Theta measures the angular relationship between body orientation and action
 direction. But diagonality is NOT about "higher theta = more dangerous."
@@ -174,7 +174,7 @@ def compute_pass_theta(
     # AXIS 2: RECEIVER ADVANTAGE
     # ================================================================
     receiver_metrics = _compute_receiver_advantage(
-        rx, ry, attackers, frame_ori, attacking_right
+        rx, ry, attackers, attacking_right
     )
 
     # ================================================================
@@ -237,7 +237,6 @@ def compute_pass_theta(
 def _compute_receiver_advantage(
     rx: float, ry: float,
     attackers: pd.DataFrame,
-    _all_players: pd.DataFrame,
     attacking_right: bool,
 ) -> dict:
     """Compute receiver advantage metrics.
@@ -451,9 +450,6 @@ def compute_all_theta(
             result = compute_pass_theta(event, orientations, attacking_team, attacking_right)
         elif etype == "carry":
             result = compute_carry_theta(event, orientations, attacking_team, attacking_right)
-        else:
-            continue
-
         results.append(result)
 
     return pd.DataFrame(results)

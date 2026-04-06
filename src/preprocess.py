@@ -47,7 +47,7 @@ PRE_WINDOW_FRAMES = int(1.0 * FRAMERATE)  # 50
 
 # --- Shots loader ---------------------------------------------------------
 
-def _load_shots_kpi(match: str, metadata: dict) -> pd.DataFrame:
+def _load_shots_kpi(match: str) -> pd.DataFrame:
     """Load shots from kpi_data XML with xG, position, SyncedFrameId."""
     tree = ET.parse(kpi_path(match))
     root = tree.getroot()
@@ -150,7 +150,7 @@ def _build_events(match: str, metadata: dict) -> pd.DataFrame:
     )
 
     # Shots
-    shots = _load_shots_kpi(match, metadata)
+    shots = _load_shots_kpi(match)
     shots["parquet_frame"] = shots.apply(
         lambda r: synced_frame_to_parquet(r["synced_frame_id"], metadata, r["half"])
         if r["synced_frame_id"] > 0 else -1,
@@ -479,10 +479,6 @@ def load_cached_events(match: str) -> pd.DataFrame:
     """Load preprocessed events from cache. Instant."""
     return pd.read_parquet(CACHE_DIR / match / "events.parquet")
 
-def load_cached_possessions(match: str) -> pd.DataFrame:
-    """Load preprocessed possessions from cache. Instant."""
-    return pd.read_parquet(CACHE_DIR / match / "possessions.parquet")
-
 def load_cached_metadata(match: str) -> dict:
     """Load preprocessed metadata from cache. Instant.
 
@@ -497,15 +493,6 @@ def load_cached_metadata(match: str) -> dict:
     if "home_gk_left" in data:
         data["home_gk_left"] = {int(k): v for k, v in data["home_gk_left"].items()}
     return data
-
-def is_cached(match: str) -> bool:
-    """Check if a match has been preprocessed."""
-    cache_path = CACHE_DIR / match
-    return all(
-        (cache_path / f).exists()
-        for f in ["events.parquet", "skeleton.parquet", "ball.parquet",
-                   "possessions.parquet", "metadata.json"]
-    )
 
 
 # --- CLI ------------------------------------------------------------------

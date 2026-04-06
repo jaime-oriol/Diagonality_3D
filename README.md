@@ -24,7 +24,7 @@ Diagonality_3D/
 │   └── the_diagonalist_manifesto.md  # Hamilton manifesto
 │
 ├── src/                         # Python modules
-│   ├── loader.py                # Parquet skeleton + XML events unified loader
+│   ├── loader.py                # XML events, metadata, match info loader
 │   ├── preprocess.py            # Per-match cache extraction
 │   ├── orientation.py           # Head/shoulder/hip orientation from keypoints
 │   ├── vision.py                # Vision model (adapted Bekkers)

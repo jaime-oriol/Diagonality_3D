@@ -17,7 +17,6 @@ from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
-import pyarrow.parquet as pq
 
 # --- Paths ----------------------------------------------------------------
 
@@ -49,8 +48,6 @@ PART_NAMES = {
 # Skeleton team encoding
 TEAM_HOME = 1
 TEAM_AWAY = 0
-TEAM_REF = 3
-
 # Parts we need for orientation (subset for efficiency)
 # Includes ankles (16, 17) for stance_width in orientation.py
 ORIENTATION_PARTS = {1, 2, 3, 4, 5, 6, 11, 12, 13, 16, 17}
@@ -122,118 +119,6 @@ def load_metadata(match: str) -> Dict:
         "home_gk_left": home_gk_left,
         "roster": roster,
     }
-
-
-# --- Skeleton parquet -----------------------------------------------------
-
-def _parquet_path(match: str) -> Path:
-    """Return path to the skeleton parquet file for a match."""
-    prefix = MATCHES[match]
-    return MATCH_DIR / match / f"{prefix}.parquet"
-
-
-def load_skeleton_frames(
-    match: str,
-    frame_start: int,
-    frame_end: int,
-    parts: Optional[set] = ORIENTATION_PARTS,
-) -> pd.DataFrame:
-    """Load skeleton data for a range of frames.
-
-    Extracts player positions and keypoints from the nested parquet
-    structure into a flat DataFrame. Filters out referees and
-    unidentified persons (team=-1).
-
-    Args:
-        match: Match folder name (e.g. "Bayern_Hamburg").
-        frame_start: First frame number (inclusive).
-        frame_end: Last frame number (inclusive).
-        parts: Set of part IDs to extract. Default: ORIENTATION_PARTS (9 key parts).
-               Pass set(PART_NAMES.keys()) for all 21 parts.
-
-    Returns:
-        DataFrame with columns:
-            frame_number, team, jersey, part, x, y, z
-        Where part is the part name string (e.g. "nose", "pelvis").
-        Coordinates in METERS.
-    """
-
-    path = _parquet_path(match)
-    table = pq.read_table(path, filters=[
-        ("frame_number", ">=", frame_start),
-        ("frame_number", "<=", frame_end),
-    ])
-
-    rows = []
-    for i in range(len(table)):
-        frame_num = table.column("frame_number")[i].as_py()
-        skeletons = table.column("skeletons")[i].as_py()
-
-        for skel in skeletons:
-            team = skel["team"]
-            jersey = skel["jersey_number"]
-
-            # Skip referees, unidentified, and invalid
-            if team not in (TEAM_HOME, TEAM_AWAY) or jersey <= 0:
-                continue
-
-            for part in skel["parts"]:
-                pid = part["name"]
-                if pid not in parts:
-                    continue
-                rows.append((
-                    frame_num, team, jersey,
-                    PART_NAMES[pid],
-                    part["position_x"],
-                    part["position_y"],
-                    part["position_z"],
-                ))
-
-    df = pd.DataFrame(rows, columns=[
-        "frame_number", "team", "jersey", "part", "x", "y", "z",
-    ])
-    df["team"] = df["team"].astype(np.int8)
-    df["jersey"] = df["jersey"].astype(np.int8)
-    return df
-
-
-def load_ball_frames(
-    match: str,
-    frame_start: int,
-    frame_end: int,
-) -> pd.DataFrame:
-    """Load ball position and velocity for a range of frames.
-
-    Returns:
-        DataFrame with columns:
-            frame_number, x, y, z, vx, vy, vz, ball_exists
-        Coordinates in METERS, velocity in M/S.
-    """
-    path = _parquet_path(match)
-    table = pq.read_table(path, filters=[
-        ("frame_number", ">=", frame_start),
-        ("frame_number", "<=", frame_end),
-    ])
-
-    rows = []
-    for i in range(len(table)):
-        frame_num = table.column("frame_number")[i].as_py()
-        ball_exists = table.column("ball_exists")[i].as_py()
-        ball = table.column("ball")[i].as_py()
-
-        if ball is not None and ball_exists:
-            rows.append((
-                frame_num,
-                ball["position_x"], ball["position_y"], ball["position_z"],
-                ball["velocity_x"], ball["velocity_y"], ball["velocity_z"],
-                True,
-            ))
-        else:
-            rows.append((frame_num, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, False))
-
-    return pd.DataFrame(rows, columns=[
-        "frame_number", "x", "y", "z", "vx", "vy", "vz", "ball_exists",
-    ])
 
 
 # --- Frame mapping: Positions 25Hz (SyncedFrameId) <-> Skeleton 50Hz ------

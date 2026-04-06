@@ -8,9 +8,6 @@ intentionally inlined inside each viz module (vision_plot, ppcf_plot)
 because the rendering logic is specific to each overlay.
 """
 
-from pathlib import Path
-
-import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
@@ -29,9 +26,6 @@ plt.rcParams.update({
     "xtick.color": WHITE, "ytick.color": WHITE,
 })
 
-FIGURES_DIR = Path(__file__).resolve().parent.parent.parent / "figures"
-FIGURES_DIR.mkdir(exist_ok=True)
-
 # ── Team / element colors ────────────────────────────────────────────────
 
 ATT = "deepskyblue"
@@ -46,11 +40,6 @@ BALL = WHITE
 # Pitch control: defender red → neutral gray → attacker blue
 PPCF_CMAP = LinearSegmentedColormap.from_list(
     "ppcf", ["#8B0000", "#777777", "#004D98"]
-)
-
-# Vision: invisible → visible
-VISION_CMAP = LinearSegmentedColormap.from_list(
-    "vision", ["#000000", "#003311", "#00ff88"]
 )
 
 # Diagonal Opportunity Surface: no opportunity → high opportunity
@@ -74,5 +63,3 @@ PKW = dict(
     linewidth=1,
 )
 
-# Path effects for text legibility on any background
-PE = [pe.withStroke(linewidth=1.5, foreground="black"), pe.Normal()]

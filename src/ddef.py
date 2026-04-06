@@ -4,10 +4,10 @@ ddef — Defensive Disruption metric (Goes et al. 2019, extended).
 Measures how much an action disrupts the defensive structure by comparing
 the defensive state at t0 (action moment) vs t0+delta.
 
-Implementation follows Goes et al. exactly:
+Implementation extends Goes et al.:
   1. Assign defenders to 3 lines via K-Means on x-coordinate at t0
      (line labels are FIXED for both t0 and t0+delta — same players same line)
-  2. Compute 10-variable state vector S at t0 and t0+delta
+  2. Compute 14-variable state vector S at t0 and t0+delta
   3. Delta_S = S(t0+delta) - S(t0)
   4. Z-score standardize all deltas across events
   5. PCA -> PC1 (longitudinal), PC2 (lateral), PC3 (shape)
@@ -221,7 +221,6 @@ def compute_local_ddef(
     defending_team: int,
     ball_x: float,
     ball_y: float,
-    attacking_right: bool,
     gk_jersey: int,
     window: float = 3.0,
     n_nearest: int = N_LOCAL,
@@ -327,7 +326,7 @@ def compute_all_ddef(
         by = row.get("y_receiver") if row.get("event_type") == "pass" else row.get("y")
         if not pd.isna(bx) and not pd.isna(by):
             local = compute_local_ddef(frame, orientations, defending_team,
-                                        bx, by, attacking_right, gk_jersey)
+                                        bx, by, gk_jersey)
             ddef.update(local)
         else:
             ddef.update({"local_area_t0": np.nan, "local_area_tw": np.nan,
