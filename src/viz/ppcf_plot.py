@@ -42,7 +42,7 @@ def plot_ppcf_frame(
     ppcf_def: np.ndarray = None,
     immediate_window: float = None,
     n_grid_x: int = 100,
-    alpha_max: float = 0.95,
+    alpha_max: float = 1.0,
     title: str = "",
     ax: plt.Axes = None,
     save_path: str = None,
