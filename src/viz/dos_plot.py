@@ -98,16 +98,25 @@ def plot_dos_frame(
     dos_max = max(dos_pos.max(), 1e-9)
     dos_norm = np.clip(dos_pos / dos_max, 0.0, 1.0)
 
-    # Mask: only show DOS within attacker_radius of a real attacker
+    # Mask 1: only show DOS within attacker_radius of a real attacker
     att_df = orientations_frame[orientations_frame["team"] == attacking_team]
+    xx_grid, yy_grid = np.meshgrid(xgrid, ygrid)
     if len(att_df) > 0:
-        xx_grid, yy_grid = np.meshgrid(xgrid, ygrid)
         att_mask = np.zeros_like(dos_norm, dtype=bool)
-        attacker_radius = 12.0  # meters — show DOS only near real attackers
+        attacker_radius = 12.0
         for _, a in att_df.iterrows():
             dist = np.sqrt((xx_grid - float(a["x"]))**2 + (yy_grid - float(a["y"]))**2)
             att_mask |= (dist < attacker_radius)
         dos_norm[~att_mask] = 0.0
+
+    # Mask 2: no DOS more than 20m behind the ball (eliminates noise in
+    # irrelevant zones while keeping diagonal switches and buildup options)
+    if ball_xy is not None:
+        behind_limit = 20.0
+        if attacking_right:
+            dos_norm[xx_grid < (ball_xy[0] - behind_limit)] = 0.0
+        else:
+            dos_norm[xx_grid > (ball_xy[0] + behind_limit)] = 0.0
 
     # Hard zero below 20% of max
     dos_norm[dos_norm < 0.2] = 0.0
