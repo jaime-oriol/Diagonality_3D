@@ -31,6 +31,7 @@ Diagonality_3D/
 │   ├── theta.py                 # Theta per event (passes, carries)
 │   ├── ddef.py                  # D-Def: defensive disruption (Goes et al.)
 │   ├── ppcf.py                  # Immediate Orientation-Aware PPCF (reach fields)
+│   ├── dos.py                   # Diagonal Opportunity Surfaces
 │   └── viz/                     # Visualization package
 │       ├── common.py            # Shared style constants + colormaps
 │       ├── vision_plot.py       # Vision map renderer
@@ -39,7 +40,8 @@ Diagonality_3D/
 ├── cache/                       # Git-ignored (preprocessed per match)
 ├── data/                        # Git-ignored (~20GB hackathon data)
 ├── references/                  # Git-ignored (Bekkers code)
-├── test/                        # Git-ignored (test_ppcf.py + render scripts)
+│       └── dos_plot.py          # DOS heatmap renderer
+├── test/                        # Git-ignored (test_ppcf.py, test_dos.py + render scripts)
 └── figures/                     # Pre-rendered outputs
 ```
 

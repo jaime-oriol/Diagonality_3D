@@ -42,9 +42,9 @@ PPCF_CMAP = LinearSegmentedColormap.from_list(
     "ppcf", ["#8B0000", "#777777", "#004D98"]
 )
 
-# Diagonal Opportunity Surface: no opportunity → high opportunity
+# Diagonal Opportunity Surface: transparent → cyan → magenta → white
 DOS_CMAP = LinearSegmentedColormap.from_list(
-    "dos", ["#1a1a2e", "#e63946", "#ffdd00"]
+    "dos", ["#0d1117", "#00d4ff", "#ff00ff", "#ffffff"]
 )
 
 # ── Pitch dimensions (TRACAB, meters, centered) ──────────────────────────

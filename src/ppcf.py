@@ -157,16 +157,22 @@ def _player_influence(
     facing: np.ndarray,
     targets: np.ndarray,
     params: dict,
+    extra_delay: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """Per-player anisotropic Gaussian influence over all target cells.
 
     For each (player, cell) pair:
         theta     = angle between player's shoulder facing and (player -> cell)
-        delay     = rt(theta) + cod(theta)
+        delay     = rt(theta) + cod(theta) + extra_delay (if provided)
         drift     = pos + vel * delay             # where player is when ready
         reach     = max(0, W - delay) * vmax      # remaining travel budget
         sigma     = sigma_base * ((1-mod) + mod * reach/max_reach)  # base ±50%
         influence = exp(-dist(drift, cell)^2 / (2 * sigma^2))
+
+    Args:
+        extra_delay: Optional (P, N) or (P, 1) array of additional seconds
+            added to each player's reaction delay. Used by dos.py to inject
+            detection delays based on defender awareness. Default None = 0.
 
     Returns (P, N) influences in [0, 1] (peak = 1 at each player's drifted
     position). Shape (0, N) if P == 0.
@@ -184,6 +190,8 @@ def _player_influence(
 
     # Orientation-aware reaction + COD delay per (player, cell)
     delay = reaction_delay(theta, params)  # (P, N)
+    if extra_delay is not None:
+        delay = delay + extra_delay
 
     # Drift during delay: each player continues current velocity until
     # they have reoriented and can start moving toward the target.
