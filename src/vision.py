@@ -123,8 +123,13 @@ class Vision:
         return self.fov_b
 
     def field_of_view(self, sigma_r=75, sigma_a=0.4):
+        # Bekkers SSAC 2026, Apendice B (formulas 13-14):
+        #   c_a = min(0.3 * v + 0.2, 0.5)
+        #   c_r = min(0.25 * v + 0.1, 2.6)
+        # Faster players -> larger c -> narrower vision cone (loss of
+        # spatial awareness with speed).
         cr = min(0.25 * self.speed + 0.1, 2.6)
-        ca = min(0.03 * self.speed + 0.2, 0.5)
+        ca = min(0.3 * self.speed + 0.2, 0.5)
         if not hasattr(self, "fov_b"):
             self.binary_field_of_view()
         sigma_r_scaled = sigma_r * self.smoothing_multiplier

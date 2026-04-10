@@ -48,9 +48,6 @@ PART_NAMES = {
 # Skeleton team encoding
 TEAM_HOME = 1
 TEAM_AWAY = 0
-# Parts we need for orientation (subset for efficiency)
-# Includes ankles (16, 17) for stance_width in orientation.py
-ORIENTATION_PARTS = {1, 2, 3, 4, 5, 6, 11, 12, 13, 16, 17}
 
 
 # --- Metadata -------------------------------------------------------------

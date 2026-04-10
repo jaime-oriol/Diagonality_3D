@@ -23,7 +23,7 @@ import pandas as pd
 import pytest
 
 from src.scanning import (
-    ScanningMemoryConfig, FrameMemory,
+    ScanningMemoryConfig,
     compute_scanning_memory_sequence,
     resample_memory_to_grid,
     backfill_orientations,

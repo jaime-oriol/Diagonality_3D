@@ -18,16 +18,16 @@ PRE_PASS_F = 3584976  # pass frame ~5s before goal, players still spread out
 # --- Match info + GK ---
 info = load_match_info(MATCH)
 
-def _find_gk(players):
+def _find_gk(players, label):
     for p in players:
         if p.get("position") == "TW" and p.get("starting"):
             n = p.get("shirt_number")
             if isinstance(n, int) and n > 0:
                 return n
-    return 1
+    raise RuntimeError(f"No starting GK found for {label}")
 
-home_gk = _find_gk(info["home_players"])
-away_gk = _find_gk(info["away_players"])
+home_gk = _find_gk(info["home_players"], "home")
+away_gk = _find_gk(info["away_players"], "away")
 gk_jerseys = {0: away_gk, 1: home_gk}
 
 # --- Attacking team ---

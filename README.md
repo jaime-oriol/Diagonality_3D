@@ -27,17 +27,19 @@ Diagonality_3D/
 ├── src/                         # Python modules
 │   ├── loader.py                # XML events, metadata, frame mapping
 │   ├── preprocess.py            # Per-match cache extraction
-│   ├── orientation.py           # Head/shoulder/hip orientation + dynamics
+│   ├── orientation.py           # Head/shoulder/hip orientation + velocity
 │   ├── vision.py                # Vision model (adapted Bekkers)
 │   ├── theta.py                 # Theta per event (passes, carries)
 │   ├── ddef.py                  # D-Def: defensive disruption (Goes et al.)
 │   ├── ppcf.py                  # Immediate Orientation-Aware PPCF (reach fields)
 │   ├── dos.py                   # Diagonal Opportunity Surfaces
+│   ├── possession.py            # Frame-exact possession timeline
+│   ├── scanning.py              # On-ball player FOV + 2.5s scanning memory
 │   └── viz/                     # Visualization package
 │       ├── common.py            # Shared style constants + colormaps
 │       ├── vision_plot.py       # Vision map renderer
 │       ├── ppcf_plot.py         # PPCF reach-field renderer
-│       └── dos_plot.py          # DOS heatmap renderer
+│       └── dos_plot.py          # DOS heatmap renderer (FOV gate)
 │
 ├── cache/                       # Git-ignored (preprocessed per match)
 ├── data/                        # Git-ignored (~20GB hackathon data)
@@ -59,6 +61,8 @@ The analysis runs as a four-stage pipeline:
 **Stage 3 — Defensive Disruption with Orientation.** Reimplement D-Def (Goes et al. 2019) decomposed into longitudinal (PC1) and lateral (PC2) disruption. Cross with theta to show that diagonal actions (high theta) disrupt BOTH axes simultaneously, while orthogonal actions only disrupt one.
 
 **Stage 4 — Immediate Orientation-Aware PPCF and Diagonal Opportunity Surfaces.** Each player is modelled as an anisotropic Gaussian reach field centred on themselves, with sigma derived from the orientation-aware biomechanical delay: Vater (2024) reaction time + Dos'Santos (2018) change-of-direction deficit, applied to the real shoulder angle from the 3D skeleton. A defender with the ball in their blind spot literally has a hole in their reach field, and diagonals exploit it. From this, compute Diagonal Opportunity Surfaces showing where on the pitch a diagonal action gains the most control advantage.
+
+**Scanning gate (cognitive layer).** A frame-exact possession timeline (carries + passes linked to receptions via play_id) tells us, at every frame, which player is on-ball. The on-ball player's full Bekkers vision plus a 2.5s exponentially-decayed scanning memory is used to gate the DOS surface: only cells the player can SEE or has scanned recently are painted. Owner transitions (pass -> receiver) instantly switch the active FOV; the receiver does not inherit the passer's memory. With absolute display thresholds fixed across frames, the only animation visible is real model dynamics — no flicker.
 
 ---
 
