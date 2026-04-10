@@ -117,7 +117,7 @@ def test_zero_memory_paints_nothing():
 def test_full_memory_paints_dos():
     fo = _orientations_frame()
     n = 50
-    dos = _fake_dos_surface(n, value=0.02)  # well above threshold
+    dos = _fake_dos_surface(n, value=0.005)  # well above threshold
     memory = np.ones(_grid_shape(n), dtype=np.float32)
     fig, ax = plt.subplots()
     try:
@@ -125,7 +125,7 @@ def test_full_memory_paints_dos():
             fo, attacking_team=1, ball_xy=(0.0, 0.0), attacking_right=True,
             dos_surface=dos, best_direction=_fake_best_direction(n),
             scanning_memory=memory, ax=ax,
-            absolute_threshold=0.003, display_max=0.025,
+            absolute_threshold=0.0008, display_max=0.015,
         )
         ims = [im for im in ax.get_images() if im.get_zorder() == 1]
         rgba = ims[0].get_array()
@@ -141,7 +141,7 @@ def test_full_memory_paints_dos():
 def test_absolute_threshold_kills_low_values():
     fo = _orientations_frame()
     n = 50
-    dos = _fake_dos_surface(n, value=0.001)  # well below 0.003 threshold
+    dos = _fake_dos_surface(n, value=0.0003)  # well below 0.0008 threshold
     memory = np.ones(_grid_shape(n), dtype=np.float32)
     fig, ax = plt.subplots()
     try:
@@ -149,7 +149,7 @@ def test_absolute_threshold_kills_low_values():
             fo, attacking_team=1, ball_xy=(0.0, 0.0), attacking_right=True,
             dos_surface=dos, best_direction=_fake_best_direction(n),
             scanning_memory=memory, ax=ax,
-            absolute_threshold=0.003, display_max=0.025,
+            absolute_threshold=0.0008, display_max=0.015,
         )
         ims = [im for im in ax.get_images() if im.get_zorder() == 1]
         rgba = ims[0].get_array()
@@ -171,7 +171,7 @@ def test_display_max_saturates():
             fo, attacking_team=1, ball_xy=(0.0, 0.0), attacking_right=True,
             dos_surface=dos, best_direction=_fake_best_direction(n),
             scanning_memory=memory, ax=ax,
-            absolute_threshold=0.003, display_max=0.025,
+            absolute_threshold=0.0008, display_max=0.015,
             alpha_max=0.9,
         )
         ims = [im for im in ax.get_images() if im.get_zorder() == 1]

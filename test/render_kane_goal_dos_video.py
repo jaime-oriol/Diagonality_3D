@@ -122,8 +122,25 @@ vframes = sorted(f for f in dyn["frame_number"].unique()
 print(f"  {len(vframes)} render frames")
 
 # --- Possession timeline (data-driven from kpi_data) ---
+# gap_fill_max_frames=300 -> any inter-event gap up to 6s is filled by
+# extending the previous segment forward (covers transition phases that
+# kpi_data doesn't represent as discrete events).
 print("Building possession timeline from carries + passes...")
-timeline = build_possession_timeline(events, metadata)
+timeline = build_possession_timeline(events, info, gap_fill_max_frames=300)
+
+# Extend the first/last segments in the window to its boundaries so the
+# scanning gate has coverage all the way through (otherwise the celebration
+# tail and any leading silence show no DOS at all).
+in_window = timeline[
+    (timeline["frame_end"] >= start_f) & (timeline["frame_start"] <= end_f)
+].sort_values("frame_start")
+if len(in_window):
+    first_idx = in_window.index[0]
+    last_idx = in_window.index[-1]
+    if timeline.loc[first_idx, "frame_start"] > start_f:
+        timeline.loc[first_idx, "frame_start"] = start_f
+    if timeline.loc[last_idx, "frame_end"] < end_f:
+        timeline.loc[last_idx, "frame_end"] = end_f
 in_window = timeline[
     (timeline["frame_end"] >= start_f) & (timeline["frame_start"] <= end_f)
 ]
@@ -195,8 +212,8 @@ def render(i):
         dos_surface=dos_surf,
         best_direction=best_dir,
         scanning_memory=memory_on_dos,
-        absolute_threshold=0.003,
-        display_max=0.025,
+        absolute_threshold=0.0008,
+        display_max=0.015,
         ax=ax,
     )
 

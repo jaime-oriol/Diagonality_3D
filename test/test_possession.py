@@ -32,13 +32,22 @@ from src.possession import (
 # ── Fixtures ────────────────────────────────────────────────────────────
 
 def _metadata():
+    """Match info shape (mirrors loader.load_match_info output).
+
+    The kpi_data events identify players by DFL-OBJ-* PersonId; the
+    bridge to (team, jersey) lives in MatchInformations.xml, exposed
+    via load_match_info as home_players / away_players lists with
+    person_id and shirt_number.
+    """
     return {
-        "roster": {
-            (0, 7):  {"player_id": "DFL-AWAY-7",  "name": "AwayP7"},
-            (0, 8):  {"player_id": "DFL-AWAY-8",  "name": "AwayP8"},
-            (1, 11): {"player_id": "DFL-HOME-11", "name": "HomeP11"},
-            (1, 12): {"player_id": "DFL-HOME-12", "name": "HomeP12"},
-        }
+        "home_players": [
+            {"person_id": "DFL-HOME-11", "shirt_number": 11, "name": "HomeP11"},
+            {"person_id": "DFL-HOME-12", "shirt_number": 12, "name": "HomeP12"},
+        ],
+        "away_players": [
+            {"person_id": "DFL-AWAY-7", "shirt_number": 7, "name": "AwayP7"},
+            {"person_id": "DFL-AWAY-8", "shirt_number": 8, "name": "AwayP8"},
+        ],
     }
 
 
@@ -55,26 +64,45 @@ def _events_df(rows):
 
 # ── Roster lookup ───────────────────────────────────────────────────────
 
-def test_lookup_tuple_keys():
+def test_lookup_from_match_info_basic():
     lk = _build_player_lookup(_metadata())
     assert lk["DFL-HOME-11"] == (1, 11)
+    assert lk["DFL-HOME-12"] == (1, 12)
     assert lk["DFL-AWAY-7"] == (0, 7)
+    assert lk["DFL-AWAY-8"] == (0, 8)
     assert len(lk) == 4
 
 
-def test_lookup_string_keys_after_json_round_trip():
-    meta = {"roster": {"1_11": {"player_id": "X", "name": "T"},
-                       "0_7":  {"player_id": "Y", "name": "U"}}}
-    lk = _build_player_lookup(meta)
-    assert lk["X"] == (1, 11)
-    assert lk["Y"] == (0, 7)
+def test_lookup_skips_players_without_person_id():
+    info = {
+        "home_players": [
+            {"person_id": "", "shirt_number": 11},
+            {"person_id": "DFL-HOME-12", "shirt_number": 12},
+        ],
+        "away_players": [],
+    }
+    lk = _build_player_lookup(info)
+    assert lk == {"DFL-HOME-12": (1, 12)}
 
 
-def test_lookup_skips_entries_without_player_id():
-    meta = {"roster": {(1, 11): {"name": "NoPid"},
-                       (1, 12): {"player_id": "P12", "name": "Yes"}}}
-    lk = _build_player_lookup(meta)
-    assert "P12" in lk and len(lk) == 1
+def test_lookup_skips_players_with_invalid_jersey():
+    info = {
+        "home_players": [
+            {"person_id": "DFL-X", "shirt_number": -1},
+            {"person_id": "DFL-Y", "shirt_number": None},
+            {"person_id": "DFL-Z", "shirt_number": 9},
+        ],
+        "away_players": [],
+    }
+    lk = _build_player_lookup(info)
+    assert lk == {"DFL-Z": (1, 9)}
+
+
+def test_lookup_handles_missing_lists():
+    lk = _build_player_lookup({})
+    assert lk == {}
+    lk = _build_player_lookup({"home_players": None, "away_players": None})
+    assert lk == {}
 
 
 # ── Empty / degenerate cases ────────────────────────────────────────────

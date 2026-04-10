@@ -51,23 +51,31 @@ TIMELINE_COLUMNS = [
 
 # ── Roster lookup ───────────────────────────────────────────────────────
 
-def _build_player_lookup(metadata: dict) -> Dict[str, Tuple[int, int]]:
-    """Build `player_id (DFL-OBJ-*) -> (team, jersey)` from metadata roster.
+def _build_player_lookup(match_info: dict) -> Dict[str, Tuple[int, int]]:
+    """Build `player_id (DFL-OBJ-*) -> (team, jersey)` from match_info.
 
-    The metadata roster dict uses tuple keys in-memory (from loader) or
-    string "team_jersey" keys after JSON round-trip (cached metadata).
-    Both are supported.
+    The kpi_data events identify players by DFL-OBJ-* PersonId strings.
+    The TRACAB metadata.json roster uses a different (integer TRACAB)
+    ID system, so it cannot be used directly to resolve event player_ids.
+    The bridge is MatchInformations.xml, loaded by `loader.load_match_info`,
+    which provides BOTH PersonId (DFL-OBJ-*) and ShirtNumber per player.
+
+    Args:
+        match_info: dict from `loader.load_match_info(MATCH)`. Must have
+            `home_players` and `away_players` lists with `person_id` and
+            `shirt_number` fields.
+
+    Returns:
+        Dict mapping DFL-OBJ-* string -> (team_int, jersey_int) where
+        team_int is 1 for home, 0 for away (matching skeleton encoding).
     """
     lookup: Dict[str, Tuple[int, int]] = {}
-    for key, info in metadata.get("roster", {}).items():
-        if isinstance(key, tuple):
-            team, jersey = key
-        else:
-            t_str, j_str = str(key).split("_")
-            team, jersey = int(t_str), int(j_str)
-        pid = info.get("player_id")
-        if pid:
-            lookup[pid] = (int(team), int(jersey))
+    for team_int, key in [(1, "home_players"), (0, "away_players")]:
+        for p in match_info.get(key, []) or []:
+            pid = p.get("person_id")
+            jersey = p.get("shirt_number")
+            if pid and isinstance(jersey, int) and jersey > 0:
+                lookup[pid] = (team_int, jersey)
     return lookup
 
 
@@ -94,9 +102,10 @@ def _coerce_frame(val) -> Optional[int]:
 
 def build_possession_timeline(
     events: pd.DataFrame,
-    metadata: dict,
+    match_info: dict,
     pass_flight_fallback_frames: int = 25,
     reception_hold_frames: int = 10,
+    gap_fill_max_frames: int = 0,
 ) -> pd.DataFrame:
     """Build non-overlapping possession segments from kpi_data events.
 
@@ -104,19 +113,25 @@ def build_possession_timeline(
         events: Unified events DataFrame (from `load_cached_events`).
             Must contain columns: event_type, parquet_frame, player_id,
             and for carries `parquet_frame_end`; for receptions `play_id`.
-        metadata: Match metadata dict (provides roster for player_id ->
-            jersey lookup).
+        match_info: dict from `loader.load_match_info(MATCH)`, providing
+            the DFL-OBJ-* PersonId -> (team, jersey) bridge needed to
+            resolve event player_ids.
         pass_flight_fallback_frames: Duration to assume when a pass has
             no linked reception (ball goes out, etc.). Default 25 = 0.5s.
         reception_hold_frames: How long to hold receiver's FOV after a
             reception if no immediate carry covers it. Default 10 = 0.2s.
+        gap_fill_max_frames: After building segments, extend each segment
+            forward to cover any gap shorter than this. Used to keep the
+            DOS gating continuous through transition phases that have no
+            explicit kpi_data event (post-reception pause, midfield
+            recoveries, etc.). Default 0 = no filling.
 
     Returns:
         DataFrame with columns `[frame_start, frame_end, team, jersey,
         player_id, mode, source_event_id]`, sorted by frame_start, with
         strictly non-overlapping rows.
     """
-    lookup = _build_player_lookup(metadata)
+    lookup = _build_player_lookup(match_info)
 
     raw_segments = []
 
@@ -237,6 +252,13 @@ def build_possession_timeline(
             "source_event_id": src["source_event_id"],
         })
         i = j
+
+    # Optional gap fill: extend each segment forward to cover small gaps.
+    if gap_fill_max_frames > 0 and len(result) >= 2:
+        for k in range(len(result) - 1):
+            gap = result[k + 1]["frame_start"] - result[k]["frame_end"] - 1
+            if 0 < gap <= gap_fill_max_frames:
+                result[k]["frame_end"] = result[k + 1]["frame_start"] - 1
 
     return pd.DataFrame(result, columns=TIMELINE_COLUMNS)
 

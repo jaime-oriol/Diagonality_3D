@@ -61,8 +61,8 @@ def plot_dos_frame(
     figsize: tuple = (16, 10.4),
     vision_smoothing: float = 3.0,
     scanning_memory: Optional[np.ndarray] = None,
-    absolute_threshold: float = 0.003,
-    display_max: float = 0.025,
+    absolute_threshold: float = 0.0008,
+    display_max: float = 0.015,
 ) -> plt.Figure:
     """Render one frame with DOS heatmap + players + ball + direction arrows.
 
@@ -89,9 +89,11 @@ def plot_dos_frame(
             the legacy attacker-radius / behind-ball / 20%-relative
             heuristic gating.
         absolute_threshold: DOS units below this are killed (post-gate).
-            Default 0.003 — tuned for gated DOS noise floor.
+            Default 0.0008 — tuned from real Kane goal probe frames where
+            typical gated_dos peaks are 0.005-0.026 and the noise floor
+            sits around 0.0005.
         display_max: DOS units mapped to alpha_max. Fixed across frames
-            so colors are stable. Default 0.025 (~ P99 of typical DOS).
+            so colors are stable. Default 0.015 (~ P95 of gated DOS).
     """
     if gk_jerseys is None:
         gk_jerseys = {0: 1, 1: 1}
