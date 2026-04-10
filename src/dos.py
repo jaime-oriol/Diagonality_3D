@@ -290,7 +290,7 @@ def compute_dos_surface(
     attacking_right: bool,
     params: Optional[dict] = None,
     n_grid_x: int = 50,
-    n_directions: int = 12,
+    n_directions: int = 24,
     vision_smoothing: float = 3.0,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Compute Diagonal Opportunity Surface for a single frame.
@@ -310,7 +310,7 @@ def compute_dos_surface(
         params: PPCF params. Default if None.
         n_grid_x: Grid resolution. Default 50.
         n_directions: Number of candidate delivery directions (evenly
-            spaced over [0, 2*pi)). Default 12 = every 30 degrees.
+            spaced over [0, 2*pi)). Default 24 = every 15 degrees.
         vision_smoothing: Smoothing multiplier for vision.py grids.
 
     Returns:
@@ -455,7 +455,7 @@ def dos_at_targets(
     ball_xy: Tuple[float, float],
     attacking_right: bool,
     params: Optional[dict] = None,
-    n_directions: int = 12,
+    n_directions: int = 24,
     vision_smoothing: float = 3.0,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """DOS at specific target positions (point-wise API for event analysis).

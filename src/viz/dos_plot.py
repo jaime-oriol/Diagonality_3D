@@ -5,10 +5,23 @@ Same aesthetic as ppcf_plot (dark BG, Opta player markers) but with the
 DOS_CMAP: dark = no diagonal advantage, warm = high diagonal opportunity.
 
 Rendering semantics:
-    - color = DOS value mapped through DOS_CMAP (dark → red → yellow)
+    - color = DOS value mapped through DOS_CMAP (dark -> red -> yellow)
     - alpha = |DOS| clipped and scaled (cells with zero DOS fade to BG)
     - optional arrows showing the best diagonal direction per zone
+
+Two gating modes:
+  1. Legacy (default): attacker-radius mask + behind-ball mask + 20%
+     relative threshold. Heuristic. Causes flicker because thresholds
+     float with the per-frame max.
+  2. Scanning gate (preferred): pass `scanning_memory` (already
+     resampled to the DOS grid). DOS is multiplied by it (FOV + 2.5s
+     decayed memory of the on-ball player), then clipped against an
+     absolute threshold and an absolute display max — both fixed across
+     frames so colors are stable and the only animation comes from real
+     model dynamics, not from renormalization.
 """
+
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -38,7 +51,7 @@ def plot_dos_frame(
     dos_surface: np.ndarray = None,
     best_direction: np.ndarray = None,
     n_grid_x: int = 50,
-    n_directions: int = 12,
+    n_directions: int = 24,
     alpha_max: float = 0.9,
     show_arrows: bool = False,
     arrow_grid: int = 5,
@@ -47,6 +60,9 @@ def plot_dos_frame(
     save_path: str = None,
     figsize: tuple = (16, 10.4),
     vision_smoothing: float = 3.0,
+    scanning_memory: Optional[np.ndarray] = None,
+    absolute_threshold: float = 0.003,
+    display_max: float = 0.025,
 ) -> plt.Figure:
     """Render one frame with DOS heatmap + players + ball + direction arrows.
 
@@ -61,11 +77,21 @@ def plot_dos_frame(
         best_direction: Pre-computed best diagonal direction per cell
             (radians). If None, computed with dos_surface.
         n_grid_x: Grid resolution. Default 50.
-        n_directions: Candidate delivery directions. Default 12.
-        alpha_max: Peak alpha for cells with maximum DOS.
-        show_arrows: Draw arrows showing best diagonal direction. Default True.
+        n_directions: Candidate delivery directions. Default 24 (every 15 deg).
+        alpha_max: Peak alpha for cells at `display_max` DOS.
+        show_arrows: Draw arrows showing best diagonal direction. Default False.
         arrow_grid: Subsample arrows every N cells. Default 5.
         title: Optional title.
+        scanning_memory: Optional (n_grid_y, n_grid_x) on-ball scanning
+            memory grid in [0, 1], already resampled to the DOS grid.
+            If provided, DOS is gated by this mask and the absolute
+            thresholds are used (no flicker). If None, falls back to
+            the legacy attacker-radius / behind-ball / 20%-relative
+            heuristic gating.
+        absolute_threshold: DOS units below this are killed (post-gate).
+            Default 0.003 — tuned for gated DOS noise floor.
+        display_max: DOS units mapped to alpha_max. Fixed across frames
+            so colors are stable. Default 0.025 (~ P99 of typical DOS).
     """
     if gk_jerseys is None:
         gk_jerseys = {0: 1, 1: 1}
@@ -93,33 +119,49 @@ def plot_dos_frame(
     pitch = Pitch(**PKW)
     pitch.draw(ax=ax)
 
-    # DOS heatmap: only show where there's an actual attacker nearby
-    dos_pos = np.clip(dos_surface, 0.0, None)
-    dos_max = max(dos_pos.max(), 1e-9)
-    dos_norm = np.clip(dos_pos / dos_max, 0.0, 1.0)
-
-    # Mask 1: only show DOS within attacker_radius of a real attacker
-    att_df = orientations_frame[orientations_frame["team"] == attacking_team]
+    # DOS heatmap.
+    dos_pos = np.clip(dos_surface, 0.0, None).astype(np.float32)
     xx_grid, yy_grid = np.meshgrid(xgrid, ygrid)
-    if len(att_df) > 0:
-        att_mask = np.zeros_like(dos_norm, dtype=bool)
-        attacker_radius = 12.0
-        for _, a in att_df.iterrows():
-            dist = np.sqrt((xx_grid - float(a["x"]))**2 + (yy_grid - float(a["y"]))**2)
-            att_mask |= (dist < attacker_radius)
-        dos_norm[~att_mask] = 0.0
 
-    # Mask 2: no DOS more than 20m behind the ball (eliminates noise in
-    # irrelevant zones while keeping diagonal switches and buildup options)
-    if ball_xy is not None:
-        behind_limit = 20.0
-        if attacking_right:
-            dos_norm[xx_grid < (ball_xy[0] - behind_limit)] = 0.0
-        else:
-            dos_norm[xx_grid > (ball_xy[0] + behind_limit)] = 0.0
+    if scanning_memory is not None:
+        # ── Principled gate: on-ball FOV + 2.5s decayed memory ──
+        # The scanning_memory grid is assumed to already match the DOS
+        # grid shape. It encodes "what the current on-ball player has
+        # seen / is seeing", in [0, 1]. Multiplying gives an
+        # actionability-weighted DOS.
+        if scanning_memory.shape != dos_pos.shape:
+            raise ValueError(
+                f"scanning_memory shape {scanning_memory.shape} does not "
+                f"match DOS surface shape {dos_pos.shape}"
+            )
+        dos_gated = dos_pos * scanning_memory.astype(np.float32)
+        # Absolute threshold (fixed across frames -> no flicker)
+        dos_gated = np.where(dos_gated < absolute_threshold, 0.0, dos_gated)
+        # Map onto a fixed display range so colors are comparable across
+        # frames. Anything above display_max saturates.
+        dos_norm = np.clip(dos_gated / max(display_max, 1e-9), 0.0, 1.0)
+    else:
+        # ── Legacy heuristic gate (back-compat) ──
+        dos_max = max(dos_pos.max(), 1e-9)
+        dos_norm = np.clip(dos_pos / dos_max, 0.0, 1.0)
 
-    # Hard zero below 20% of max
-    dos_norm[dos_norm < 0.2] = 0.0
+        att_df = orientations_frame[orientations_frame["team"] == attacking_team]
+        if len(att_df) > 0:
+            att_mask = np.zeros_like(dos_norm, dtype=bool)
+            attacker_radius = 12.0
+            for _, a in att_df.iterrows():
+                dist = np.sqrt((xx_grid - float(a["x"]))**2 + (yy_grid - float(a["y"]))**2)
+                att_mask |= (dist < attacker_radius)
+            dos_norm[~att_mask] = 0.0
+
+        if ball_xy is not None:
+            behind_limit = 20.0
+            if attacking_right:
+                dos_norm[xx_grid < (ball_xy[0] - behind_limit)] = 0.0
+            else:
+                dos_norm[xx_grid > (ball_xy[0] + behind_limit)] = 0.0
+
+        dos_norm[dos_norm < 0.2] = 0.0
 
     rgba = DOS_CMAP(dos_norm)
     rgba[..., 3] = (dos_norm ** 1.5) * alpha_max

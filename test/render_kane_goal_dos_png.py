@@ -64,7 +64,7 @@ print("Computing DOS surface (full Bekkers vision per defender)...")
 params = default_params()
 dos, baseline, best_dir, xg, yg = compute_dos_surface(
     fo, attacking_team, ball_xy, attacking_right,
-    params=params, n_grid_x=50, n_directions=12, vision_smoothing=3.0,
+    params=params, n_grid_x=50, n_directions=24, vision_smoothing=3.0,
 )
 print(f"  DOS range: [{dos.min():.4f}, {dos.max():.4f}]")
 print(f"  Baseline PPCF range: [{baseline.min():.4f}, {baseline.max():.4f}]")
