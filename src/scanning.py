@@ -261,59 +261,6 @@ def compute_scanning_memory_sequence(
 
 # ── Resampling to a DOS grid ────────────────────────────────────────────
 
-def backfill_orientations(
-    orientations: pd.DataFrame,
-    lookback_frames: int,
-) -> pd.DataFrame:
-    """TRAMPA: extend each player's history backward with synthetic rows.
-
-    For each (team, jersey), clones the earliest available row of the
-    player into `lookback_frames` synthetic frames preceding it. The
-    synthetic rows carry the same pose (head/shoulder/hip angles, position,
-    speed) as the earliest real frame.
-
-    Why: the scanning memory at the first frames of a render needs
-    `memory_window_s * framerate` frames of history. If the skeleton
-    cache was extracted with a small PRE_WINDOW, those historical
-    frames may be missing, causing a visible "fade in" at the start
-    of the video. This helper provides a coarse visual fill so the
-    memory looks fully populated from frame 1.
-
-    NOT analytically correct: assumes the player was in the exact same
-    pose during the lookback, which is wrong if they were scanning. Use
-    only for visual preview rendering. The honest fix is to regenerate
-    the cache with a wider PRE_WINDOW (see preprocess.PRE_WINDOW_FRAMES).
-
-    Args:
-        orientations: DataFrame with at least frame_number, team, jersey,
-            and any number of orientation columns.
-        lookback_frames: Number of synthetic historical frames to add per
-            player. 0 disables (no-op).
-
-    Returns:
-        New DataFrame with the synthetic rows concatenated. Original
-        rows are preserved unchanged.
-    """
-    if lookback_frames <= 0 or len(orientations) == 0:
-        return orientations.copy()
-
-    parts = [orientations]
-    for (team, jersey), grp in orientations.groupby(
-        ["team", "jersey"], sort=False
-    ):
-        first_row = grp.sort_values("frame_number").iloc[0]
-        first_frame = int(first_row["frame_number"])
-        synth_frames = np.arange(first_frame - lookback_frames, first_frame)
-        if len(synth_frames) == 0:
-            continue
-        # Clone the earliest row N times, then overwrite frame_number.
-        base = first_row.to_dict()
-        synth = pd.DataFrame([base] * len(synth_frames))
-        synth["frame_number"] = synth_frames
-        parts.append(synth)
-    return pd.concat(parts, ignore_index=True)
-
-
 def resample_memory_to_grid(
     memory: np.ndarray,
     target_xgrid: np.ndarray,

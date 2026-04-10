@@ -61,7 +61,7 @@ def plot_dos_frame(
     figsize: tuple = (16, 10.4),
     vision_smoothing: float = 3.0,
     scanning_memory: Optional[np.ndarray] = None,
-    absolute_threshold: float = 0.0008,
+    noise_floor: float = 0.0005,
     display_max: float = 0.015,
 ) -> plt.Figure:
     """Render one frame with DOS heatmap + players + ball + direction arrows.
@@ -88,12 +88,14 @@ def plot_dos_frame(
             thresholds are used (no flicker). If None, falls back to
             the legacy attacker-radius / behind-ball / 20%-relative
             heuristic gating.
-        absolute_threshold: DOS units below this are killed (post-gate).
-            Default 0.0008 — tuned from real Kane goal probe frames where
-            typical gated_dos peaks are 0.005-0.026 and the noise floor
-            sits around 0.0005.
-        display_max: DOS units mapped to alpha_max. Fixed across frames
-            so colors are stable. Default 0.015 (~ P95 of gated DOS).
+        noise_floor: Lower edge of the smoothstep visibility curve. Cells
+            with gated DOS at or below this fade to transparent smoothly
+            (no hard cliff -> no on/off flicker). Default 0.0005, tuned
+            from real Kane goal probe frames.
+        display_max: Upper edge of the smoothstep visibility curve. Cells
+            with gated DOS at or above this saturate to alpha_max. Fixed
+            across frames so the color scale is stable. Default 0.015
+            (~ P95 of gated DOS values observed at the goal sequence).
     """
     if gk_jerseys is None:
         gk_jerseys = {0: 1, 1: 1}
@@ -130,18 +132,20 @@ def plot_dos_frame(
         # The scanning_memory grid is assumed to already match the DOS
         # grid shape. It encodes "what the current on-ball player has
         # seen / is seeing", in [0, 1]. Multiplying gives an
-        # actionability-weighted DOS.
+        # actionability-weighted DOS surface.
         if scanning_memory.shape != dos_pos.shape:
             raise ValueError(
                 f"scanning_memory shape {scanning_memory.shape} does not "
                 f"match DOS surface shape {dos_pos.shape}"
             )
         dos_gated = dos_pos * scanning_memory.astype(np.float32)
-        # Absolute threshold (fixed across frames -> no flicker)
-        dos_gated = np.where(dos_gated < absolute_threshold, 0.0, dos_gated)
-        # Map onto a fixed display range so colors are comparable across
-        # frames. Anything above display_max saturates.
-        dos_norm = np.clip(dos_gated / max(display_max, 1e-9), 0.0, 1.0)
+        # Smoothstep visibility curve [noise_floor, display_max]:
+        # values <= noise_floor fade to 0, values >= display_max saturate
+        # to 1, transition is C^1 continuous (no on/off flicker).
+        edge0 = float(noise_floor)
+        edge1 = float(max(display_max, edge0 + 1e-9))
+        t = np.clip((dos_gated - edge0) / (edge1 - edge0), 0.0, 1.0)
+        dos_norm = (t * t * (3.0 - 2.0 * t)).astype(np.float32)
     else:
         # ── Legacy heuristic gate (back-compat) ──
         dos_max = max(dos_pos.max(), 1e-9)
@@ -166,13 +170,12 @@ def plot_dos_frame(
         dos_norm[dos_norm < 0.2] = 0.0
 
     rgba = DOS_CMAP(dos_norm)
-    rgba[..., 3] = (dos_norm ** 1.5) * alpha_max
-    rgba[dos_norm == 0.0, 3] = 0.0
+    rgba[..., 3] = dos_norm * alpha_max
 
     ax.imshow(
         rgba, origin="lower",
         extent=[-52.5, 52.5, -34.0, 34.0],
-        interpolation="bilinear",
+        interpolation="spline36",
         zorder=1, aspect="auto",
     )
 

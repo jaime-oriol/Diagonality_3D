@@ -38,7 +38,7 @@ from src.possession import (
 )
 from src.scanning import (
     ScanningMemoryConfig, compute_scanning_memory_sequence,
-    backfill_orientations, resample_memory_to_grid,
+    resample_memory_to_grid,
 )
 from src.dos import compute_dos_surface, default_params
 from src.ppcf import PITCH_LENGTH, PITCH_WIDTH
@@ -162,14 +162,15 @@ def test_gap_fill_increases_coverage():
 def kane_frame_setup():
     d = _load()
     skel = load_cached_skeleton(MATCH)
-    # Use a small window around the goal frame to keep test fast
+    # Load skeleton for the probe frame + a generous lookback so the
+    # 2.5s scanning memory has full historical coverage. This relies on
+    # the cache being generated with PRE_WINDOW_FRAMES >= 150.
     probe = GOAL_F - 100  # 2s before the shot, Kane has the ball
     ss = skel[skel["frame_number"].between(probe - 200, probe + 5)]
     del skel
     ori = compute_orientations(ss, smooth=True)
     dyn = add_dynamics(ori)
     del ss, ori
-    dyn = backfill_orientations(dyn, lookback_frames=150)
 
     tl = build_possession_timeline(d["events"], d["info"], gap_fill_max_frames=250)
     config = ScanningMemoryConfig(
@@ -232,9 +233,10 @@ def test_dos_gate_paints_cells_at_kane_carry(kane_frame_setup):
 
     gated = dos_pos * memory_on_dos
     assert gated.max() > 0.001, f"Gated DOS max too small: {gated.max()}"
-    # With proper thresholds (0.0008), at least a few cells should pass
-    n_painted = (gated > 0.0008).sum()
-    assert n_painted >= 10, (
-        f"Only {n_painted} cells survive the gate at threshold 0.0008. "
-        f"This means the visualization will be nearly empty."
+    # With smoothstep (noise_floor=0.0005, display_max=0.015), cells
+    # above the noise floor should produce visible alpha.
+    n_above_floor = (gated > 0.0005).sum()
+    assert n_above_floor >= 20, (
+        f"Only {n_above_floor} cells survive noise_floor=0.0005. "
+        f"The visualization would be nearly empty."
     )

@@ -26,7 +26,6 @@ from src.scanning import (
     ScanningMemoryConfig,
     compute_scanning_memory_sequence,
     resample_memory_to_grid,
-    backfill_orientations,
     _compute_single_vision, _vision_grid_extent,
     PITCH_LENGTH, PITCH_WIDTH,
 )
@@ -360,57 +359,6 @@ def test_resample_handles_zero_input():
     assert (out == 0.0).all()
 
 
-# ── Backfill orientations ──────────────────────────────────────────────
-
-def test_backfill_orientations_zero_lookback_noop():
-    players = [_player(1, 11, 0.0, 0.0, 0.0)]
-    ori = _orientations([100, 101, 102], players)
-    out = backfill_orientations(ori, lookback_frames=0)
-    assert len(out) == len(ori)
-
-
-def test_backfill_orientations_adds_synthetic_rows():
-    players = [
-        _player(1, 11, 0.0, 0.0, 0.5),
-        _player(0, 7, 10.0, 0.0, np.pi),
-    ]
-    ori = _orientations([100, 101], players)
-    out = backfill_orientations(ori, lookback_frames=10)
-    # Each player should now have rows from 90 to 101 = 12 frames
-    for (t, j), grp in out.groupby(["team", "jersey"]):
-        frames = sorted(grp["frame_number"].unique())
-        assert frames[0] == 90
-        assert frames[-1] == 101
-        assert len(frames) == 12
-
-
-def test_backfill_orientations_clones_earliest_pose():
-    players = [_player(1, 11, 5.0, 3.0, 1.234, shoulder_width=0.42)]
-    ori = _orientations([100], players)
-    out = backfill_orientations(ori, lookback_frames=5)
-    synth = out[(out["frame_number"] < 100)]
-    assert len(synth) == 5
-    assert (synth["x"] == 5.0).all()
-    assert (synth["y"] == 3.0).all()
-    assert np.allclose(synth["head_angle"], 1.234)
-    assert np.allclose(synth["shoulder_width"], 0.42)
-
-
-def test_backfill_orientations_multi_player_no_dupes():
-    players = [
-        _player(1, 11, 0.0, 0.0, 0.0),
-        _player(1, 12, 5.0, 5.0, 0.5),
-        _player(0, 7, 10.0, 0.0, np.pi),
-    ]
-    ori = _orientations([100, 101, 102], players)
-    out = backfill_orientations(ori, lookback_frames=20)
-    # Each player should have 23 frames (20 synthetic + 3 real), no dupes
-    for (t, j), grp in out.groupby(["team", "jersey"]):
-        frames = grp["frame_number"].values
-        assert len(frames) == len(np.unique(frames))
-        assert len(frames) == 23
-
-
 # ── NaN handling ──────────────────────────────────────────────────────
 
 def test_compute_single_vision_handles_nan_head_angle():
@@ -507,32 +455,4 @@ def test_segment_partially_inside_range_clipped():
     in_range = sorted(out.keys())
     assert in_range[0] >= 100
     assert in_range[-1] <= 150
-
-
-def test_backfill_then_compute_memory_populated_at_first_frame():
-    """End-to-end: without backfill the first frame's memory == fov_now,
-    with backfill the memory is fully decayed-max populated."""
-    players = [
-        _player(1, 11, 0.0, 0.0, 0.0),
-        _player(0, 7, 10.0, 0.0, np.pi),
-    ]
-    ori = _orientations([200], players)
-    poss = _carry_segment(1, 11, 200, 200)
-    config = ScanningMemoryConfig(memory_window_s=1.0, tau_decay_s=1.0,
-                                  vision_smoothing=2.0)
-    # No backfill: memory == fov_now (only 1 historical frame)
-    out_raw = compute_scanning_memory_sequence(ori, poss, (200, 200), config)
-    fm_raw = out_raw[200]
-    assert np.isclose(fm_raw.memory.sum(), fm_raw.fov_now.sum())
-
-    # With backfill: 50 synthetic prior frames appear in the cache
-    ori_filled = backfill_orientations(ori, lookback_frames=50)
-    out_fill = compute_scanning_memory_sequence(ori_filled, poss, (200, 200), config)
-    fm_fill = out_fill[200]
-    # Memory should have AT LEAST as much mass as fov_now (decayed clones
-    # don't increase the max but they don't reduce it either; the static
-    # scene means the max is fov_now anyway).
-    assert fm_fill.memory.sum() >= fm_fill.fov_now.sum() - 1e-3
-    # Owner unchanged
-    assert fm_fill.owner_team == 1 and fm_fill.owner_jersey == 11
 

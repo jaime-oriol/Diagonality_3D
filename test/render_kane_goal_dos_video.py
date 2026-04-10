@@ -10,14 +10,15 @@ Pipeline:
      decayed memory of his own scanning. This is the cognitive layer
      that turns the DOS from a god-eye metric into an actionable one.
   4. For each render frame, compute the DOS surface (24 directions) and
-     gate it by the scanning memory resampled to the DOS grid. Render
-     with absolute thresholds (no per-frame renormalization), so the
-     only visible animation is real model dynamics — zero flicker.
+     gate it by the scanning memory resampled to the DOS grid. Apply a
+     temporal EMA across frames (alpha=0.25, half-life ~60 ms) for
+     biological visual persistence; reset on owner change.
+  5. Render with smoothstep visibility curve over a fixed display range,
+     spline36 interpolation. No flicker, no on/off cliffs.
 
-TRAMPA in this script: orientations are backfilled with 150 synthetic
-historical frames per player so the memory looks fully populated from
-the very first rendered frame. The honest fix is to bump
-preprocess.PRE_WINDOW_FRAMES from 50 to ~150 and rerun preprocess.
+Requires the cache to be generated with PRE_WINDOW_FRAMES >= 150 in
+preprocess.py so the 2.5s scanning lookback has full coverage. Run
+test/regenerate_caches.py if the cache is older.
 """
 
 import sys; sys.path.insert(0, ".")
@@ -31,15 +32,13 @@ from matplotlib.animation import FuncAnimation
 from src.loader import load_match_info
 from src.orientation import compute_orientations, add_dynamics
 from src.preprocess import (
-    load_cached_skeleton, load_cached_ball,
-    load_cached_events, load_cached_metadata,
+    load_cached_skeleton, load_cached_ball, load_cached_events,
 )
 from src.dos import compute_dos_surface, default_params
 from src.possession import build_possession_timeline
 from src.scanning import (
     ScanningMemoryConfig,
     compute_scanning_memory_sequence,
-    backfill_orientations,
     resample_memory_to_grid,
 )
 from src.viz.dos_plot import plot_dos_frame, BG
@@ -53,9 +52,8 @@ WINDOW_POST = 15  # seconds after shot
 start_f = GOAL_F - WINDOW_PRE * FPS
 end_f = GOAL_F + WINDOW_POST * FPS
 
-# --- Metadata + GK identification ---
+# --- Match info + GK identification ---
 info = load_match_info(MATCH)
-metadata = load_cached_metadata(MATCH)
 
 
 def _find_gk(players, label):
@@ -109,13 +107,6 @@ for col in ("vx", "vy"):
                     index=s.index)))
 print(f"  {len(dyn):,} orientation rows (velocity smoothed, w={SMOOTH_W})")
 
-# TRAMPA: pad each player's history with 150 synthetic frames so the
-# scanning memory is fully populated from frame 1. Replace by re-cache
-# with PRE_WINDOW_FRAMES=150 for production-quality renders.
-BACKFILL_FRAMES = 150
-dyn = backfill_orientations(dyn, lookback_frames=BACKFILL_FRAMES)
-print(f"  Backfilled +{BACKFILL_FRAMES} frames per player (TRAMPA)")
-
 ball = load_cached_ball(MATCH)
 vframes = sorted(f for f in dyn["frame_number"].unique()
                  if start_f <= f <= end_f)
@@ -163,9 +154,12 @@ print(f"  {len(memories)} frame memories computed ({time.time()-t0:.0f}s)")
 
 # --- DOS params ---
 params = default_params()
-N_GRID = 50          # DOS grid resolution
+N_GRID = 80          # DOS grid resolution (1.3m cells, smoother than 50)
 N_DIRS = 24          # 24 candidate directions (every 15 deg)
 DOS_VISION_SM = 1.0  # vision smoothing INSIDE compute_dos_surface (cheap)
+EMA_ALPHA = 0.25     # temporal EMA on the gated DOS (newer-frame weight).
+                     # alpha=0.25 -> half-life ~2 frames = 60ms at 50fps,
+                     # consistent with biological visual persistence.
 
 # Pre-compute DOS grid coords for memory resampling
 from src.ppcf import PITCH_LENGTH, PITCH_WIDTH
@@ -179,6 +173,11 @@ YGRID = np.arange(N_GRID_Y) * DY - PITCH_WIDTH / 2 + DY / 2
 # --- Render ---
 fig, ax = plt.subplots(figsize=(16, 10.4))
 fig.set_facecolor(BG)
+
+# EMA state for the gated DOS, plus the previous owner so we reset the
+# temporal smoothing whenever possession switches (otherwise the new
+# player's view would be contaminated by the previous owner's gating).
+_ema_state = {"value": None, "owner": None}
 
 
 def render(i):
@@ -196,23 +195,40 @@ def render(i):
         vision_smoothing=DOS_VISION_SM,
     )
 
-    # Resample scanning memory onto the DOS grid (or zeros if unknown owner)
+    # Resample scanning memory onto the DOS grid + identify owner
     fm = memories.get(f)
     if fm is not None:
         memory_on_dos = resample_memory_to_grid(fm.memory, XGRID, YGRID)
+        owner = (fm.owner_team, fm.owner_jersey)
     else:
         memory_on_dos = np.zeros_like(dos_surf, dtype=np.float32)
+        owner = None
 
+    # Apply gate now (so the EMA operates on the final, comparable signal)
+    gated_now = np.clip(dos_surf, 0.0, None).astype(np.float32) * memory_on_dos
+
+    # Temporal EMA: hard reset on owner change to avoid cross-contamination.
+    prev = _ema_state["value"]
+    if owner != _ema_state["owner"] or prev is None or prev.shape != gated_now.shape:
+        ema = gated_now.copy()
+    else:
+        ema = EMA_ALPHA * gated_now + (1.0 - EMA_ALPHA) * prev
+    _ema_state["value"] = ema
+    _ema_state["owner"] = owner
+
+    # Pass the pre-gated, EMA'd DOS to plot_dos_frame with a no-op gate
+    # mask (ones) so the renderer skips its internal multiplication and
+    # just applies the smoothstep visibility curve to the EMA output.
     plot_dos_frame(
         fo,
         attacking_team=attacking_team,
         ball_xy=ball_xy,
         attacking_right=attacking_right,
         gk_jerseys=gk_jerseys,
-        dos_surface=dos_surf,
+        dos_surface=ema,
         best_direction=best_dir,
-        scanning_memory=memory_on_dos,
-        absolute_threshold=0.0008,
+        scanning_memory=np.ones_like(ema, dtype=np.float32),
+        noise_floor=0.0005,
         display_max=0.015,
         ax=ax,
     )

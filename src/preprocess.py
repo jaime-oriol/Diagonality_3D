@@ -41,8 +41,11 @@ FRAMERATE = 50
 # D-Def window: 3s after event at full 50Hz (150 frames)
 DDEF_WINDOW_FRAMES = int(3.0 * FRAMERATE)  # 150
 
-# Pre-event window: 1s before at full 50Hz (50 frames)
-PRE_WINDOW_FRAMES = int(1.0 * FRAMERATE)  # 50
+# Pre-event window: 3s before at full 50Hz (150 frames). Sized to fully
+# cover the 2.5s scanning memory lookback used by src/scanning.py, plus
+# 0.5s of buffer. Bumping this requires regenerating the cache via
+# test/regenerate_caches.py.
+PRE_WINDOW_FRAMES = int(3.0 * FRAMERATE)  # 150
 
 
 # --- Shots loader ---------------------------------------------------------

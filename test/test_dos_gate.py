@@ -9,7 +9,7 @@ Covers:
   - scanning_memory shape mismatch raises
   - Zero memory -> zero painted DOS (no flicker)
   - Memory > 0, DOS > 0 -> painted (above threshold)
-  - DOS below absolute_threshold killed
+  - DOS below noise_floor smoothly fades to 0
   - DOS above display_max saturates (no overflow)
   - Legacy heuristic still works when scanning_memory is None
 """
@@ -117,7 +117,7 @@ def test_zero_memory_paints_nothing():
 def test_full_memory_paints_dos():
     fo = _orientations_frame()
     n = 50
-    dos = _fake_dos_surface(n, value=0.005)  # well above threshold
+    dos = _fake_dos_surface(n, value=0.005)  # mid-range DOS
     memory = np.ones(_grid_shape(n), dtype=np.float32)
     fig, ax = plt.subplots()
     try:
@@ -125,7 +125,7 @@ def test_full_memory_paints_dos():
             fo, attacking_team=1, ball_xy=(0.0, 0.0), attacking_right=True,
             dos_surface=dos, best_direction=_fake_best_direction(n),
             scanning_memory=memory, ax=ax,
-            absolute_threshold=0.0008, display_max=0.015,
+            noise_floor=0.0005, display_max=0.015,
         )
         ims = [im for im in ax.get_images() if im.get_zorder() == 1]
         rgba = ims[0].get_array()
@@ -138,10 +138,16 @@ def test_full_memory_paints_dos():
 
 # ── Threshold kills sub-threshold values ───────────────────────────────
 
-def test_absolute_threshold_kills_low_values():
+def test_noise_floor_smoothstep_kills_low_values():
+    """Cells with gated DOS at or below noise_floor must fade to 0.
+
+    The smoothstep is C^1 continuous, so a value strictly equal to
+    noise_floor produces visibility 0 (no on/off cliff).
+    """
     fo = _orientations_frame()
     n = 50
-    dos = _fake_dos_surface(n, value=0.0003)  # well below 0.0008 threshold
+    # value < noise_floor -> smoothstep edge t=0 -> alpha=0
+    dos = _fake_dos_surface(n, value=0.0003)
     memory = np.ones(_grid_shape(n), dtype=np.float32)
     fig, ax = plt.subplots()
     try:
@@ -149,11 +155,34 @@ def test_absolute_threshold_kills_low_values():
             fo, attacking_team=1, ball_xy=(0.0, 0.0), attacking_right=True,
             dos_surface=dos, best_direction=_fake_best_direction(n),
             scanning_memory=memory, ax=ax,
-            absolute_threshold=0.0008, display_max=0.015,
+            noise_floor=0.0005, display_max=0.015,
         )
         ims = [im for im in ax.get_images() if im.get_zorder() == 1]
         rgba = ims[0].get_array()
         assert rgba[..., 3].max() == 0.0
+    finally:
+        plt.close(fig)
+
+
+def test_smoothstep_intermediate_value_partially_visible():
+    """Values between noise_floor and display_max produce partial alpha."""
+    fo = _orientations_frame()
+    n = 50
+    # Middle of [0.0005, 0.015] -> ~0.0078, smoothstep midpoint = 0.5
+    dos = _fake_dos_surface(n, value=0.00775)
+    memory = np.ones(_grid_shape(n), dtype=np.float32)
+    fig, ax = plt.subplots()
+    try:
+        plot_dos_frame(
+            fo, attacking_team=1, ball_xy=(0.0, 0.0), attacking_right=True,
+            dos_surface=dos, best_direction=_fake_best_direction(n),
+            scanning_memory=memory, ax=ax,
+            noise_floor=0.0005, display_max=0.015, alpha_max=0.9,
+        )
+        ims = [im for im in ax.get_images() if im.get_zorder() == 1]
+        rgba = ims[0].get_array()
+        # Smoothstep at t=0.5 gives 0.5; alpha = 0.5 * 0.9 = 0.45
+        assert 0.35 < rgba[..., 3].max() < 0.55
     finally:
         plt.close(fig)
 
@@ -171,13 +200,12 @@ def test_display_max_saturates():
             fo, attacking_team=1, ball_xy=(0.0, 0.0), attacking_right=True,
             dos_surface=dos, best_direction=_fake_best_direction(n),
             scanning_memory=memory, ax=ax,
-            absolute_threshold=0.0008, display_max=0.015,
+            noise_floor=0.0005, display_max=0.015,
             alpha_max=0.9,
         )
         ims = [im for im in ax.get_images() if im.get_zorder() == 1]
         rgba = ims[0].get_array()
-        # Alpha should be at the cap (saturated), not exceed alpha_max
-        assert rgba[..., 3].max() <= 0.9 + 1e-6
+        # Smoothstep saturates to 1 above display_max -> alpha = alpha_max
         assert rgba[..., 3].max() == pytest.approx(0.9, abs=1e-6)
     finally:
         plt.close(fig)
