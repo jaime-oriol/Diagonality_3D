@@ -21,12 +21,13 @@ Diagonality_3D/
 │   ├── hackathon_data.md        # Complete data inventory (verified)
 │   ├── diagonality.md           # Spielverlagerung tactical theory
 │   ├── vision_de_paul.md        # Bekkers SSAC 2026 vision model paper
-│   └── the_diagonalist_manifesto.md  # Hamilton manifesto
+│   ├── the_diagonalist_manifesto.md  # Hamilton manifesto
+│   └── prompts.md               # Reusable prompts and notes
 │
 ├── src/                         # Python modules
-│   ├── loader.py                # XML events, metadata, match info loader
+│   ├── loader.py                # XML events, metadata, frame mapping
 │   ├── preprocess.py            # Per-match cache extraction
-│   ├── orientation.py           # Head/shoulder/hip orientation from keypoints
+│   ├── orientation.py           # Head/shoulder/hip orientation + dynamics
 │   ├── vision.py                # Vision model (adapted Bekkers)
 │   ├── theta.py                 # Theta per event (passes, carries)
 │   ├── ddef.py                  # D-Def: defensive disruption (Goes et al.)
@@ -35,13 +36,13 @@ Diagonality_3D/
 │   └── viz/                     # Visualization package
 │       ├── common.py            # Shared style constants + colormaps
 │       ├── vision_plot.py       # Vision map renderer
-│       └── ppcf_plot.py         # PPCF reach-field renderer
+│       ├── ppcf_plot.py         # PPCF reach-field renderer
+│       └── dos_plot.py          # DOS heatmap renderer
 │
 ├── cache/                       # Git-ignored (preprocessed per match)
 ├── data/                        # Git-ignored (~20GB hackathon data)
 ├── references/                  # Git-ignored (Bekkers code)
-│       └── dos_plot.py          # DOS heatmap renderer
-├── test/                        # Git-ignored (test_ppcf.py, test_dos.py + render scripts)
+├── test/                        # Git-ignored (render scripts + sample outputs)
 └── figures/                     # Pre-rendered outputs
 ```
 
