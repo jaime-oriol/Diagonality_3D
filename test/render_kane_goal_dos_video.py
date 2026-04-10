@@ -9,10 +9,10 @@ Pipeline:
      the on-ball player's full Bekkers FOV plus a 2.5s exponentially
      decayed memory of his own scanning. This is the cognitive layer
      that turns the DOS from a god-eye metric into an actionable one.
-  4. For each render frame, compute the DOS surface (24 directions) and
-     gate it by the scanning memory resampled to the DOS grid. Apply a
-     temporal EMA across frames (alpha=0.25, half-life ~60 ms) for
-     biological visual persistence; reset on owner change.
+  4. For each render frame, compute the DOS surface (24 directions),
+     gate it by the resampled scanning memory, blur it spatially with a
+     ~1.5m gaussian, and apply a temporal EMA across frames (alpha=0.10,
+     half-life ~140 ms) for visual readability. Reset on owner change.
   5. Render with smoothstep visibility curve over a fixed display range,
      spline36 interpolation. No flicker, no on/off cliffs.
 
@@ -197,7 +197,7 @@ def render(i):
     by = float(bf.iloc[0]["y"]) if len(bf) > 0 else 0.0
     ball_xy = (bx, by)
 
-    dos_surf, _, best_dir, _, _ = compute_dos_surface(
+    dos_surf, _, _, _, _ = compute_dos_surface(
         fo, attacking_team, ball_xy, attacking_right,
         params=params, n_grid_x=N_GRID, n_directions=N_DIRS,
         vision_smoothing=DOS_VISION_SM,
@@ -231,18 +231,17 @@ def render(i):
     _ema_state["value"] = ema
     _ema_state["owner"] = owner
 
-    # Pass the pre-gated, EMA'd DOS to plot_dos_frame with a no-op gate
-    # mask (ones) so the renderer skips its internal multiplication and
-    # just applies the smoothstep visibility curve to the EMA output.
+    # The DOS we pass is ALREADY gated (multiplied by memory_on_dos),
+    # blurred and EMA-smoothed. Use a no-op all-ones mask so the
+    # renderer's smoothstep curve operates on this final signal directly.
     plot_dos_frame(
         fo,
         attacking_team=attacking_team,
         ball_xy=ball_xy,
         attacking_right=attacking_right,
-        gk_jerseys=gk_jerseys,
         dos_surface=ema,
-        best_direction=best_dir,
         scanning_memory=np.ones_like(ema, dtype=np.float32),
+        gk_jerseys=gk_jerseys,
         noise_floor=0.0005,
         display_max=0.015,
         ax=ax,

@@ -157,18 +157,22 @@ def compute_scanning_memory_sequence(
 ) -> Dict[int, FrameMemory]:
     """Compute scanning memory for every frame in `[frame_min, frame_max]`.
 
-    For each frame t in the range, computes:
-        memory(t) = max over tau in [0, memory_window_s] of:
-                    V_owner(t)(x, y, t - tau) * exp(-tau / tau_decay_s)
+    For each frame t belonging to a possession segment with owner P
+    starting at seg_fs:
+        effective_age_max = min(mem_window, t - seg_fs)
+        memory(t) = max over age in [0, effective_age_max] of:
+                    V_P(x, y, t - age) * exp(-age / tau_decay)
 
-    where owner(t) is the on-ball player at frame t (from `possession`),
-    and V_P(s) is player P's full Bekkers vision grid at frame s.
+    where V_P(s) is player P's full Bekkers vision grid at frame s.
+    The linear growth of the lookback is what prevents the receiver
+    from inheriting the passer's pre-pass scanning context.
 
-    Visions are precomputed per-segment: for each possession segment
-    with owner P on [fs, fe], P's vision is computed on
-    [fs - mem_window, fe] exactly once and cached. The memory grid at
-    each frame is then a max of `(cache[t - age] * weight[age])` over
-    all valid ages in [0, mem_window].
+    Per-segment caching: for each possession segment with owner P on
+    [seg_fs, seg_fe], P's vision is computed once on
+    [max(seg_fs, fs - mem_window), fe] (where fs/fe are the segment
+    range clipped to frame_range) and reused for every query inside
+    the segment. The historical clamp at seg_fs guarantees no leak
+    from previous owners.
 
     Args:
         orientations: Orientations+dynamics DataFrame (must contain

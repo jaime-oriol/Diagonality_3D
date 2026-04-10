@@ -4,24 +4,20 @@ dos_plot — Render Diagonal Opportunity Surfaces on pitch.
 Same aesthetic as ppcf_plot (dark BG, Opta player markers) but with the
 DOS_CMAP: dark = no diagonal advantage, warm = high diagonal opportunity.
 
-Rendering semantics:
-    - color = DOS value mapped through DOS_CMAP (dark -> red -> yellow)
-    - alpha = |DOS| clipped and scaled (cells with zero DOS fade to BG)
-    - optional arrows showing the best diagonal direction per zone
+The DOS surface is gated by the on-ball player's scanning memory
+(FOV + 2.5s exponentially decayed history) so only cells the player can
+SEE or has scanned recently are painted. A smoothstep visibility curve
+maps the gated DOS onto a fixed display range — no per-frame
+renormalization, no on/off flicker.
 
-Two gating modes:
-  1. Legacy (default): attacker-radius mask + behind-ball mask + 20%
-     relative threshold. Heuristic. Causes flicker because thresholds
-     float with the per-frame max.
-  2. Scanning gate (preferred): pass `scanning_memory` (already
-     resampled to the DOS grid). DOS is multiplied by it (FOV + 2.5s
-     decayed memory of the on-ball player), then clipped against an
-     absolute threshold and an absolute display max — both fixed across
-     frames so colors are stable and the only animation comes from real
-     model dynamics, not from renormalization.
+The caller is expected to pass:
+  - dos_surface: pre-computed DOS grid (typically already EMA-smoothed
+    and gaussian-blurred by the render loop)
+  - scanning_memory: same shape as dos_surface, in [0, 1], encoding what
+    the current on-ball player has seen
+  - noise_floor / display_max: absolute bounds (NOT per-frame), so the
+    color scale is comparable across the whole video.
 """
-
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -30,8 +26,6 @@ import matplotlib.patheffects as pe
 from matplotlib.patches import Wedge
 from mplsoccer import Pitch
 
-from ..dos import compute_dos_surface
-from ..ppcf import default_params
 from .common import (
     BG, WHITE, PKW, DOS_CMAP,
     ATT as ATT_C, DEF as DEF_C,
@@ -47,47 +41,33 @@ def plot_dos_frame(
     attacking_team: int,
     ball_xy: tuple,
     attacking_right: bool,
+    dos_surface: np.ndarray,
+    scanning_memory: np.ndarray,
     gk_jerseys: dict = None,
-    dos_surface: np.ndarray = None,
-    best_direction: np.ndarray = None,
-    n_grid_x: int = 50,
-    n_directions: int = 24,
     alpha_max: float = 0.9,
-    show_arrows: bool = False,
-    arrow_grid: int = 5,
     title: str = "",
     ax: plt.Axes = None,
     save_path: str = None,
     figsize: tuple = (16, 10.4),
-    vision_smoothing: float = 3.0,
-    scanning_memory: Optional[np.ndarray] = None,
     noise_floor: float = 0.0005,
     display_max: float = 0.015,
 ) -> plt.Figure:
-    """Render one frame with DOS heatmap + players + ball + direction arrows.
+    """Render one frame with DOS heatmap + players + ball.
 
     Args:
         orientations_frame: Single-frame orientations slice.
         attacking_team: Team ID.
         ball_xy: Ball position (x, y) in meters.
         attacking_right: True if attacking toward +x.
-        gk_jerseys: {team_id: jersey} for GK markers.
-        dos_surface: Pre-computed DOS from compute_dos_surface(). If None,
-            computed inside.
-        best_direction: Pre-computed best diagonal direction per cell
-            (radians). If None, computed with dos_surface.
-        n_grid_x: Grid resolution. Default 50.
-        n_directions: Candidate delivery directions. Default 24 (every 15 deg).
+        dos_surface: (n_grid_y, n_grid_x) DOS grid. Typically the EMA'd
+            and gaussian-blurred output of the render loop, NOT the raw
+            output of compute_dos_surface.
+        scanning_memory: (n_grid_y, n_grid_x) on-ball scanning memory in
+            [0, 1], already resampled to the DOS grid. The DOS is
+            multiplied by this mask before being mapped to color.
+        gk_jerseys: {team_id: jersey} for GK markers. Default {0:1, 1:1}.
         alpha_max: Peak alpha for cells at `display_max` DOS.
-        show_arrows: Draw arrows showing best diagonal direction. Default False.
-        arrow_grid: Subsample arrows every N cells. Default 5.
         title: Optional title.
-        scanning_memory: Optional (n_grid_y, n_grid_x) on-ball scanning
-            memory grid in [0, 1], already resampled to the DOS grid.
-            If provided, DOS is gated by this mask and the absolute
-            thresholds are used (no flicker). If None, falls back to
-            the legacy attacker-radius / behind-ball / 20%-relative
-            heuristic gating.
         noise_floor: Lower edge of the smoothstep visibility curve. Cells
             with gated DOS at or below this fade to transparent smoothly
             (no hard cliff -> no on/off flicker). Default 0.0005, tuned
@@ -100,19 +80,11 @@ def plot_dos_frame(
     if gk_jerseys is None:
         gk_jerseys = {0: 1, 1: 1}
 
-    # Compute DOS if not provided
-    if dos_surface is None or best_direction is None:
-        dos_surface, _, best_direction, xgrid, ygrid = compute_dos_surface(
-            orientations_frame, attacking_team, ball_xy, attacking_right,
-            params=default_params(), n_grid_x=n_grid_x,
-            n_directions=n_directions, vision_smoothing=vision_smoothing,
+    if scanning_memory.shape != dos_surface.shape:
+        raise ValueError(
+            f"scanning_memory shape {scanning_memory.shape} does not "
+            f"match DOS surface shape {dos_surface.shape}"
         )
-    else:
-        n_y, n_x = dos_surface.shape
-        dx = 105.0 / n_x
-        dy = 68.0 / n_y
-        xgrid = np.arange(n_x) * dx - 52.5 + dx / 2.0
-        ygrid = np.arange(n_y) * dy - 34.0 + dy / 2.0
 
     # Figure / axis
     if ax is None:
@@ -123,51 +95,17 @@ def plot_dos_frame(
     pitch = Pitch(**PKW)
     pitch.draw(ax=ax)
 
-    # DOS heatmap.
+    # ── Gate + smoothstep visibility curve ───────────────────────────
+    # Multiply DOS by the on-ball scanning memory to keep only cells the
+    # player can see / has scanned recently. Map onto [0, 1] via a C^1
+    # smoothstep over [noise_floor, display_max] so there is no on/off
+    # cliff and the color scale is fixed cross-frame.
     dos_pos = np.clip(dos_surface, 0.0, None).astype(np.float32)
-    xx_grid, yy_grid = np.meshgrid(xgrid, ygrid)
-
-    if scanning_memory is not None:
-        # ── Principled gate: on-ball FOV + 2.5s decayed memory ──
-        # The scanning_memory grid is assumed to already match the DOS
-        # grid shape. It encodes "what the current on-ball player has
-        # seen / is seeing", in [0, 1]. Multiplying gives an
-        # actionability-weighted DOS surface.
-        if scanning_memory.shape != dos_pos.shape:
-            raise ValueError(
-                f"scanning_memory shape {scanning_memory.shape} does not "
-                f"match DOS surface shape {dos_pos.shape}"
-            )
-        dos_gated = dos_pos * scanning_memory.astype(np.float32)
-        # Smoothstep visibility curve [noise_floor, display_max]:
-        # values <= noise_floor fade to 0, values >= display_max saturate
-        # to 1, transition is C^1 continuous (no on/off flicker).
-        edge0 = float(noise_floor)
-        edge1 = float(max(display_max, edge0 + 1e-9))
-        t = np.clip((dos_gated - edge0) / (edge1 - edge0), 0.0, 1.0)
-        dos_norm = (t * t * (3.0 - 2.0 * t)).astype(np.float32)
-    else:
-        # ── Legacy heuristic gate (back-compat) ──
-        dos_max = max(dos_pos.max(), 1e-9)
-        dos_norm = np.clip(dos_pos / dos_max, 0.0, 1.0)
-
-        att_df = orientations_frame[orientations_frame["team"] == attacking_team]
-        if len(att_df) > 0:
-            att_mask = np.zeros_like(dos_norm, dtype=bool)
-            attacker_radius = 12.0
-            for _, a in att_df.iterrows():
-                dist = np.sqrt((xx_grid - float(a["x"]))**2 + (yy_grid - float(a["y"]))**2)
-                att_mask |= (dist < attacker_radius)
-            dos_norm[~att_mask] = 0.0
-
-        if ball_xy is not None:
-            behind_limit = 20.0
-            if attacking_right:
-                dos_norm[xx_grid < (ball_xy[0] - behind_limit)] = 0.0
-            else:
-                dos_norm[xx_grid > (ball_xy[0] + behind_limit)] = 0.0
-
-        dos_norm[dos_norm < 0.2] = 0.0
+    dos_gated = dos_pos * scanning_memory.astype(np.float32)
+    edge0 = float(noise_floor)
+    edge1 = float(max(display_max, edge0 + 1e-9))
+    t = np.clip((dos_gated - edge0) / (edge1 - edge0), 0.0, 1.0)
+    dos_norm = (t * t * (3.0 - 2.0 * t)).astype(np.float32)
 
     rgba = DOS_CMAP(dos_norm)
     rgba[..., 3] = dos_norm * alpha_max
@@ -178,32 +116,6 @@ def plot_dos_frame(
         interpolation="spline36",
         zorder=1, aspect="auto",
     )
-
-    # --- Direction arrows (subsampled grid) ---
-    if show_arrows and best_direction is not None:
-        xx, yy = np.meshgrid(xgrid, ygrid)
-        # Subsample
-        step_y = max(1, len(ygrid) // arrow_grid)
-        step_x = max(1, len(xgrid) // arrow_grid)
-        sy = slice(step_y // 2, None, step_y)
-        sx = slice(step_x // 2, None, step_x)
-
-        ax_x = xx[sy, sx].ravel()
-        ax_y = yy[sy, sx].ravel()
-        ax_d = best_direction[sy, sx].ravel()
-        ax_dos = dos_pos[sy, sx].ravel()
-
-        # Only draw arrows where DOS > 10% of max
-        mask = ax_dos > dos_max * 0.1
-        if mask.any():
-            u = np.cos(ax_d[mask])
-            v = np.sin(ax_d[mask])
-            ax.quiver(
-                ax_x[mask], ax_y[mask], u, v,
-                color="#ffdd00", scale=25, scale_units="width",
-                width=0.004, headwidth=4, headlength=5,
-                alpha=0.7, zorder=4,
-            )
 
     # --- Players ---
     for _, p in orientations_frame.iterrows():

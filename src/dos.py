@@ -2,41 +2,44 @@
 dos — Diagonal Opportunity Surfaces.
 
 Quantifies how much additional pitch control the attacking team gains by
-exploiting diagonal actions (passes, carries, runs) vs orthogonal ones.
+exploiting diagonal actions (passes, carries) vs orthogonal ones.
 
 For each cell (x, y) on the pitch, DOS measures:
-    DOS(x, y) = ppcf_att(best_diagonal_direction) - ppcf_att(forward_direction)
+    DOS(x, y) = max(ppcf_att over diagonal directions)
+              - max(ppcf_att over forward  directions)
 
 The mechanism: when a diagonal action occurs, defenders who cannot SEE the
-threat (attacker or ball flight) suffer extra detection delay on top of
-their normal biomechanical delay (Vater RT + Dos'Santos COD). This shrinks
+threat (attacker or ball) suffer extra detection delay on top of their
+normal biomechanical delay (Vater RT + Dos'Santos COD). This shrinks
 their reach-field blob, opening gaps the attacker can exploit.
 
 Detection delay depends on two independent vision signals per defender:
-    1. V_i(attacker_xy) — can the defender see the attacker? (vision.py, full
-       FOV + occlusion model from real 3D skeleton)
-    2. V_i(passer_xy) — can the defender see where the ball comes from?
+    1. V_i(attacker_xy) — can the defender see the attacker?  (vision.py,
+       full Bekkers FOV + occlusion with real shoulder widths)
+    2. V_i(passer_xy)   — can the defender see the passer (ball position)?
 
 Awareness combines both signals dynamically:
-    awareness_i = f(V_attacker, V_passer, attacker_speed, attacker_direction)
+    awareness_i = clip( (0.7 * V_attacker + 0.3 * V_passer)
+                        * speed_penalty(attacker_speed)
+                        * diag_penalty(attacker_angle_from_fwd), 0, 1 )
 
 Extra detection delay:
-    detection_delay = rt(theta_to_threat) * (1 - awareness)
+    detection_delay = max(0, (rt(theta_to_threat) - rt_base) * (1 - awareness))
 
 This feeds into ppcf._player_influence via the extra_delay parameter,
 producing an awareness-modified PPCF that quantifies the diagonal gain.
 
 Direction classification (DFL PlayAngle convention):
-    forward:  |angle_from_forward| < 22.5°
+    forward:  |angle_from_forward| <  22.5°
     diagonal: 22.5° <= |angle_from_forward| < 67.5°
-    sideways: 67.5° <= |angle_from_forward| < 90°
+    sideways: |angle_from_forward| >= 67.5°  (discarded)
 
-Coordinate convention: TRACAB meters, centered at (0, 0).
-All angles in RADIANS.
+Coordinate convention: TRACAB meters, centered at (0, 0). Angles in RADIANS.
 
 References:
   - Spielverlagerung (2025) Tactical Theory: Diagonality
   - Vater (2024) Reaction time vs visual eccentricity
+  - Dos'Santos (2018) Change-of-direction deficit
   - Bekkers (2026) Wide Open Gazes (vision model used for awareness)
 """
 
@@ -296,9 +299,11 @@ def compute_dos_surface(
     """Compute Diagonal Opportunity Surface for a single frame.
 
     For each cell on the pitch, computes how much more pitch control the
-    attacking team gains from the best diagonal delivery vs a forward one.
+    attacking team gains from the best diagonal delivery vs the best
+    forward one.
 
-    DOS(x,y) = max(ppcf_att over diagonal directions) - ppcf_att(forward)
+    DOS(x,y) = max(ppcf_att over diagonal dirs)
+             - max(ppcf_att over forward  dirs)
 
     Args:
         orientations_frame: Single-frame orientations slice with columns:

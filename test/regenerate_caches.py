@@ -1,9 +1,9 @@
 """Regenerate the per-match caches with the wider PRE_WINDOW.
 
-The 2.5s scanning memory in src/scanning.py needs at least 125 frames
-of historical orientations BEFORE every rendered frame. preprocess.py
-now uses PRE_WINDOW_FRAMES = 150 (3s) so the scanning lookback is fully
-covered without any backfill trampa.
+The 2.5s scanning memory in src/scanning.py needs up to 125 frames of
+historical orientations within the same possession segment. preprocess.py
+uses PRE_WINDOW_FRAMES = 150 (3s) so the scanning lookback is fully
+covered for every event window in the cache.
 
 What this script does (in order, per match):
   1. Run preprocess.preprocess_match(match) which:

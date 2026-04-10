@@ -5,11 +5,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from src.orientation import compute_orientations, add_dynamics
-from src.preprocess import load_cached_metadata
 from src.viz.vision_plot import plot_vision_frame, BG
 
 match = "Bayern_Hamburg"
-meta = load_cached_metadata(match)
 GOAL_F, FPS = 3585218, 50
 start_f, end_f = GOAL_F - 20*FPS, GOAL_F + 15*FPS
 

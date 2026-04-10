@@ -28,8 +28,7 @@ if not CACHE_DIR.exists():
 
 from src.loader import load_match_info
 from src.preprocess import (
-    load_cached_events, load_cached_metadata,
-    load_cached_skeleton, load_cached_ball,
+    load_cached_events, load_cached_skeleton, load_cached_ball,
 )
 from src.orientation import compute_orientations, add_dynamics
 from src.possession import (
@@ -56,7 +55,6 @@ def _load():
     if not _loaded:
         _loaded["info"] = load_match_info(MATCH)
         _loaded["events"] = load_cached_events(MATCH)
-        _loaded["metadata"] = load_cached_metadata(MATCH)
     return _loaded
 
 

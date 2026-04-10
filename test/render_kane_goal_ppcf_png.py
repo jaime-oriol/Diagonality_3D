@@ -14,8 +14,7 @@ matplotlib.use("Agg")
 from src.loader import load_match_info
 from src.orientation import compute_orientations, add_dynamics
 from src.preprocess import (
-    load_cached_skeleton, load_cached_ball, load_cached_metadata,
-    load_cached_events,
+    load_cached_skeleton, load_cached_ball, load_cached_events,
 )
 from src.viz.ppcf_plot import plot_ppcf_frame
 
@@ -36,8 +35,7 @@ def _find_gk(players: list, team_label: str) -> int:
     raise RuntimeError(f"No starting GK (PlayingPosition='TW') found for {team_label}")
 
 
-print("Loading metadata + match info...")
-meta = load_cached_metadata(MATCH)
+print("Loading match info...")
 info = load_match_info(MATCH)
 
 home_gk = _find_gk(info["home_players"], "home")

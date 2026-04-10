@@ -3,13 +3,15 @@ Tests for src/scanning.py — scanning memory pipeline.
 
 Covers:
   - Vision grid extent shapes (smoothing parameter)
-  - Single vision compute presence + missing player handling
+  - Single vision compute: presence + missing player + NaN handling
   - Single-frame memory equals current FOV
   - Static scene: memory == FOV at every frame
-  - Rotation: memory remembers an old gaze direction
+  - Within-segment rotation persists in memory
   - Hard cutoff: memory drops past memory_window_s
   - Decay weights monotonic
   - Owner transition: receiver does NOT inherit passer's memory
+  - Linear lookback growth: at owner change memory == fov_now,
+    grows linearly to memory_window_s, then caps
   - resample_memory_to_grid: shape, range, value preservation
   - Frames outside any segment have no entry in result
 """
