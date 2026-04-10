@@ -17,16 +17,24 @@ in the last ~2.5 seconds, weighted by recency". It is the natural gate
 for DOS (and any other action-relevant metric) because decisions the
 player cannot perceive are not actionable.
 
-Formally, for owner P at frame t:
-    M(x, y, t) = max over tau in [0, memory_window_s] of:
+Formally, for owner P at frame t (segment_start = fs):
+    effective_window(t) = min(memory_window_s, (t - fs) / framerate)
+    M(x, y, t) = max over tau in [0, effective_window(t)] of:
                  V_P(x, y, t - tau) * exp(-tau / tau_decay_s)
 
 where V_P is player P's FULL vision grid at the historical frame.
 
 Key properties:
+  - **Linear lookback growth on owner change**: at the instant of a
+    transition (e.g. reception), the effective lookback is 0 — only
+    the current FOV is shown. The lookback then grows linearly with
+    time and saturates at memory_window_s. This avoids showing the
+    receiver's pre-pass scanning, which is irrelevant context that
+    confuses the narrative. After memory_window_s into a segment, the
+    memory operates at full historical depth.
   - Owner transitions (pass -> receiver) do NOT inherit the passer's
-    memory. The receiver's own scanning history is used, because that
-    is what the receiver perceives.
+    memory. The receiver's own scanning history is used, and that
+    history starts FRESH at the moment they become on-ball.
   - Hard window cutoff: frames older than memory_window_s contribute
     exactly zero (not just exponentially small).
   - Per-segment caching: each possession segment precomputes its owner's
@@ -203,13 +211,19 @@ def compute_scanning_memory_sequence(
         jersey = int(seg["jersey"])
         mode = str(seg["mode"])
 
-        fs = max(int(seg["frame_start"]), f_min)
+        seg_fs = int(seg["frame_start"])
+        fs = max(seg_fs, f_min)
         fe = min(int(seg["frame_end"]), f_max)
         if fs > fe:
             continue
 
-        # Pre-compute the owner's vision for [fs - mem_window, fe] once.
-        hist_start = fs - mem_window
+        # Pre-compute the owner's vision for the cache range.
+        # At each query frame t in [fs, fe], the oldest historical frame
+        # needed is max(seg_fs, t - mem_window). The global minimum over
+        # all t is therefore max(seg_fs, fs - mem_window). Caching exactly
+        # that range avoids both waste and missing frames at the segment
+        # start (which would silently truncate the lookback).
+        hist_start = max(seg_fs, fs - mem_window)
         hist_end = fe
         cached_frames = []
         cached_grids = []
@@ -230,12 +244,15 @@ def compute_scanning_memory_sequence(
         cache: Dict[int, np.ndarray] = dict(zip(cached_frames, cached_grids))
 
         # Memory per query frame in [fs, fe].
+        # The effective lookback grows linearly with time-since-segment-start
+        # so the receiver does NOT inherit pre-pass scanning context.
         for t in range(fs, fe + 1):
             fov_now = cache.get(t, np.zeros((gy, gx), dtype=np.float32))
-            # Gather visions in the [t - mem_window, t] window.
+            effective_max_age = min(mem_window, t - seg_fs)
+            # Gather visions in the [t - effective_max_age, t] window.
             window_grids = []
             window_weights = []
-            for age in range(mem_window + 1):
+            for age in range(effective_max_age + 1):
                 tf = t - age
                 g = cache.get(tf)
                 if g is None:

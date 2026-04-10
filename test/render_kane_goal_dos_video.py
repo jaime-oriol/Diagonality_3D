@@ -28,6 +28,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from scipy.ndimage import gaussian_filter
 
 from src.loader import load_match_info
 from src.orientation import compute_orientations, add_dynamics
@@ -154,12 +155,17 @@ print(f"  {len(memories)} frame memories computed ({time.time()-t0:.0f}s)")
 
 # --- DOS params ---
 params = default_params()
-N_GRID = 80          # DOS grid resolution (1.3m cells, smoother than 50)
+N_GRID = 100         # DOS grid resolution (1.05m cells)
 N_DIRS = 24          # 24 candidate directions (every 15 deg)
 DOS_VISION_SM = 1.0  # vision smoothing INSIDE compute_dos_surface (cheap)
-EMA_ALPHA = 0.25     # temporal EMA on the gated DOS (newer-frame weight).
-                     # alpha=0.25 -> half-life ~2 frames = 60ms at 50fps,
-                     # consistent with biological visual persistence.
+EMA_ALPHA = 0.10     # temporal EMA on the gated DOS (newer-frame weight).
+                     # alpha=0.10 -> half-life ~7 frames = 140ms at 50fps,
+                     # tuned for visual readability (slower than biology).
+SPATIAL_BLUR_SIGMA_M = 1.5   # gaussian blur on gated DOS, sigma in meters
+                             # (~1.4 cells at N_GRID=100). Smooths the
+                             # cell-level discontinuities created by the
+                             # discrete direction sampling without
+                             # erasing the macroscopic blob structure.
 
 # Pre-compute DOS grid coords for memory resampling
 from src.ppcf import PITCH_LENGTH, PITCH_WIDTH
@@ -169,6 +175,8 @@ DX = PITCH_LENGTH / N_GRID
 DY = PITCH_WIDTH / N_GRID_Y
 XGRID = np.arange(N_GRID) * DX - PITCH_LENGTH / 2 + DX / 2
 YGRID = np.arange(N_GRID_Y) * DY - PITCH_WIDTH / 2 + DY / 2
+# Spatial blur sigma in CELLS (so it scales naturally with N_GRID).
+BLUR_SIGMA_CELLS = SPATIAL_BLUR_SIGMA_M / DX
 
 # --- Render ---
 fig, ax = plt.subplots(figsize=(16, 10.4))
@@ -206,6 +214,13 @@ def render(i):
 
     # Apply gate now (so the EMA operates on the final, comparable signal)
     gated_now = np.clip(dos_surf, 0.0, None).astype(np.float32) * memory_on_dos
+
+    # Spatial smoothing: gaussian blur over the gated DOS to soften the
+    # cell-level discontinuities created by direction discretization. The
+    # sigma is set in meters and converted to cells, so it stays the same
+    # physical size regardless of N_GRID.
+    gated_now = gaussian_filter(gated_now, sigma=BLUR_SIGMA_CELLS,
+                                mode="constant", cval=0.0).astype(np.float32)
 
     # Temporal EMA: hard reset on owner change to avoid cross-contamination.
     prev = _ema_state["value"]

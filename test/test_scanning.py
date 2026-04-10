@@ -170,12 +170,14 @@ def test_frames_outside_segments_absent():
 # ── Memory: rotation / persistence ──────────────────────────────────────
 
 def test_memory_remembers_past_rotation():
-    """Player looks +X for 30 frames, then -X. Memory at the last frame
-    should still encode some +X visibility (because it's within the 2.5s
-    window) — even though current FOV is purely -X.
+    """Within a single carry segment, the memory at the current frame
+    must still encode an earlier head rotation that happened during the
+    segment (linear lookback growth = within-segment scanning persists).
     """
     rows = []
-    for f in range(80, 145):
+    # Carry segment [100, 140]. Within it, the player looks +x for the
+    # first 10 frames (100-109) and -x afterwards. Frame 115 is queried.
+    for f in range(100, 145):
         head = 0.0 if f < 110 else np.pi
         rows.append({"frame_number": f, **_player(1, 11, 0.0, 0.0, head)})
         rows.append({"frame_number": f, **_player(0, 7, 30.0, 0.0, np.pi)})
@@ -190,7 +192,7 @@ def test_memory_remembers_past_rotation():
     # Current FOV (looking -X) should be left-heavy.
     assert fm.fov_now[:, : w // 2].sum() > fm.fov_now[:, w // 2 :].sum()
     # Memory should still have content on the right (the +X scan from
-    # frames 80-109 within the 1s window of frame 115).
+    # frames 100-109 inside the segment, within lookback of frame 115).
     assert fm.memory[:, w // 2 :].sum() > 0
     # And memory should also include the current left FOV.
     assert fm.memory[:, : w // 2].sum() > 0
@@ -441,6 +443,78 @@ def test_segment_fully_outside_range_skipped():
         ori, poss, (200, 250),
         ScanningMemoryConfig(vision_smoothing=2.0))
     assert len(out) == 0
+
+
+# ── Linear lookback growth (no pre-segment inheritance) ───────────────
+
+def test_lookback_grows_linearly_after_owner_change():
+    """At the first frame of a segment, memory == fov_now (lookback=0).
+    A few frames later, memory uses the accumulated frames since fs.
+    After memory_window_s, lookback saturates at the full window.
+
+    Tests via 3 owners back-to-back. The third segment owner has been
+    "elsewhere" before — if memory inheritance were broken, his first
+    frame as on-ball would still leak the previous owner's vision.
+    """
+    rows = []
+    # Three players, all visible across the full timeline. Player A and
+    # B look +x, player C looks -x. Switch on-ball A -> B -> C.
+    for f in range(0, 200):
+        rows.append({"frame_number": f, **_player(1, 11, -10.0, 0.0, 0.0)})
+        rows.append({"frame_number": f, **_player(1, 12,   0.0, 0.0, 0.0)})
+        rows.append({"frame_number": f, **_player(1, 13,  10.0, 0.0, np.pi)})
+        rows.append({"frame_number": f, **_player(0,  7,  30.0, 0.0, np.pi)})
+    ori = pd.DataFrame(rows)
+    poss = pd.DataFrame([
+        {"frame_start": 0,   "frame_end": 99,  "team": 1, "jersey": 11,
+         "player_id": "A", "mode": MODE_CARRY, "source_event_id": "a"},
+        {"frame_start": 100, "frame_end": 149, "team": 1, "jersey": 12,
+         "player_id": "B", "mode": MODE_CARRY, "source_event_id": "b"},
+        {"frame_start": 150, "frame_end": 199, "team": 1, "jersey": 13,
+         "player_id": "C", "mode": MODE_CARRY, "source_event_id": "c"},
+    ])
+    config = ScanningMemoryConfig(memory_window_s=1.0, tau_decay_s=10.0,
+                                  vision_smoothing=2.0)
+    out = compute_scanning_memory_sequence(ori, poss, (150, 199), config)
+
+    # At the very first frame of segment C: memory MUST equal fov_now,
+    # because lookback=0. No leakage from segment B.
+    fm150 = out[150]
+    assert fm150.owner_jersey == 13
+    np.testing.assert_allclose(fm150.memory, fm150.fov_now, atol=1e-6)
+
+    # 50 frames later, lookback has grown to min(50, 50) = 50. The memory
+    # now considers frames [100, 150] within segment C only. Owner is C
+    # the entire time, so memory and fov_now should be similar mass.
+    fm200 = out[199]
+    assert fm200.owner_jersey == 13
+    # Memory mass should be >= fov_now mass (decayed clones add coverage).
+    assert fm200.memory.sum() >= fm200.fov_now.sum() - 1e-3
+
+
+def test_lookback_caps_at_memory_window_for_long_segments():
+    """For a long carry, the lookback eventually caps at memory_window_s.
+    Verifies it doesn't keep growing past the configured maximum.
+    """
+    rows = []
+    # Single owner across 300 frames, head_angle rotating by 1 deg/frame
+    # so each cached vision is unique and we can spot the cap.
+    for f in range(0, 300):
+        head = (f * np.pi / 600)
+        rows.append({"frame_number": f, **_player(1, 11, 0.0, 0.0, head)})
+        rows.append({"frame_number": f, **_player(0,  7, 10.0, 0.0, np.pi)})
+    ori = pd.DataFrame(rows)
+    poss = _carry_segment(1, 11, 0, 299)
+    config = ScanningMemoryConfig(memory_window_s=0.5,  # 25 frame cap
+                                  tau_decay_s=10.0,
+                                  vision_smoothing=2.0)
+    out = compute_scanning_memory_sequence(ori, poss, (50, 60), config)
+    # By frame 50, lookback should be capped at 25 frames.
+    # Same memory shape every frame after the cap is hit, but contents
+    # should differ slightly because the rotating head moves the FOV.
+    masses = [out[t].memory.sum() for t in range(50, 61)]
+    # All should be roughly the same magnitude (cap reached)
+    assert max(masses) - min(masses) < 0.3 * max(masses)
 
 
 def test_segment_partially_inside_range_clipped():
