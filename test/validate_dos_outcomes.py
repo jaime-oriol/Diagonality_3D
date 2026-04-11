@@ -50,7 +50,7 @@ import pyarrow.parquet as pq
 from scipy.signal import savgol_filter
 from scipy.stats import mannwhitneyu
 
-from src.loader import MATCHES, compute_attacking_right, load_match_info
+from src.loader import MATCHES, compute_attacking_right, infer_attacking_team
 from src.preprocess import load_cached_events, CACHE_DIR
 from src.orientation import compute_orientations, add_dynamics
 from src.dos import dos_for_event, default_params
@@ -139,8 +139,10 @@ def _zone_of(x: float, y: float) -> str:
 # ── Per-match processing ────────────────────────────────────────────────
 
 def _build_event_records(match: str, sample: Optional[int]) -> pd.DataFrame:
-    info = load_match_info(match)
-    home_team_id = info.get("home_team_id", "")
+    """Load + filter cached events. The home/away mapping is NOT needed here:
+    `attacking_team` is inferred per event from the skeleton (nearest player
+    to the event position) inside `_process_chunk`. That keeps the script
+    fully cache-driven and independent of the raw XML."""
     home_gk_left_p1 = _load_metadata_home_gk_left_p1(match)
 
     events = load_cached_events(match)
@@ -160,7 +162,6 @@ def _build_event_records(match: str, sample: Optional[int]) -> pd.DataFrame:
         ev = ev.iloc[idx].reset_index(drop=True)
 
     ev = ev.sort_values("parquet_frame").reset_index(drop=True)
-    ev["ctx_home_team_id"] = home_team_id
     ev["ctx_home_gk_left_p1"] = home_gk_left_p1
     ev["ctx_match"] = match
     return ev
@@ -199,7 +200,15 @@ def _process_chunk(
         if fo is None or len(fo) < 6:
             continue
 
-        attacking_team = 1 if e.team_id == e.ctx_home_team_id else 0
+        # Determine attacking team via skeleton proximity (no XML needed).
+        # `infer_attacking_team` looks for the player closest to (x, y) in
+        # the orientations frame and returns its team integer (0/1, where
+        # 1 = home in the skeleton convention). Falls back to None if no
+        # player is within 3 m of the event position.
+        attacking_team = infer_attacking_team(
+            float(e.x), float(e.y), fo, f, max_dist=3.0)
+        if attacking_team is None:
+            continue
         attacking_right = compute_attacking_right(
             attacking_team, int(e.half), e.ctx_home_gk_left_p1)
 
