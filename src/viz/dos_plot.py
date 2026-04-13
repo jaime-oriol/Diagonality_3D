@@ -1,22 +1,28 @@
 """
 dos_plot — Render Diagonal Opportunity Surfaces on pitch.
 
-Same aesthetic as ppcf_plot (dark BG, Opta player markers) but with the
-DOS_CMAP: dark = no diagonal advantage, warm = high diagonal opportunity.
+Two-layer overlay with distinct cognitive semantics:
 
-The DOS surface is gated by the on-ball player's scanning memory
-(FOV + 2.5s exponentially decayed history) so only cells the player can
-SEE or has scanned recently are painted. A smoothstep visibility curve
-maps the gated DOS onto a fixed display range — no per-frame
-renormalization, no on/off flicker.
+  1. VISIBLE DOS (DOS_CMAP, cold cyan→magenta): opportunities the on-ball
+     player is currently seeing or scanned within the last 2.5s.
+     Gated by `dos * scanning_memory`.
 
-The caller is expected to pass:
-  - dos_surface: pre-computed DOS grid (typically already EMA-smoothed
-    and gaussian-blurred by the render loop)
-  - scanning_memory: same shape as dos_surface, in [0, 1], encoding what
-    the current on-ball player has seen
-  - noise_floor / display_max: absolute bounds (NOT per-frame), so the
-    color scale is comparable across the whole video.
+  2. SHADOW DOS (SHADOW_CMAP, warm amber→gold): opportunities the player
+     does NOT see but that lie ahead of the ball inside realistic pass
+     or carry range. Gated by `dos * (1 - scanning_memory) * forward_cone`.
+     A shadowpass (Hamilton manifesto) is a pass that actually lands
+     inside a gold cell.
+
+Both layers use the same smoothstep visibility curve `t^2*(3-2t)` over
+absolute `[noise_floor, display_max]` bounds, so the colour scale is
+fixed across frames — no per-frame renormalization, no on/off flicker.
+
+The caller is expected to pre-process both surfaces (blur + EMA) per
+frame and pass them in. The visible layer takes `dos_surface` + a
+`scanning_memory` mask (use all-ones if the caller has already gated).
+The shadow layer is optional; pass `shadow_surface` already masked by
+`compute_forward_cone_mask` to restrict it to the on-ball player's
+offensive arc.
 """
 
 import numpy as np
@@ -27,13 +33,36 @@ from matplotlib.patches import Wedge
 from mplsoccer import Pitch
 
 from .common import (
-    BG, WHITE, PKW, DOS_CMAP,
+    BG, WHITE, PKW, DOS_CMAP, SHADOW_CMAP,
     ATT as ATT_C, DEF as DEF_C,
     GK as GK_C, BALL as BALL_C,
 )
 
 PE_S = [pe.withStroke(linewidth=1.5, foreground="black"), pe.Normal()]
 MS = 20
+
+
+def compute_forward_cone_mask(
+    ball_xy: tuple,
+    attacking_right: bool,
+    xgrid: np.ndarray,
+    ygrid: np.ndarray,
+    max_dist_m: float = 35.0,
+) -> np.ndarray:
+    """Boolean mask (len(ygrid), len(xgrid)) of cells that:
+      - are ahead of the ball along the attacking axis
+      - lie within `max_dist_m` of the ball (realistic pass / carry range)
+
+    Used to gate the shadow-DOS layer so it only appears in the on-ball
+    player's offensive arc, never in the defensive half (avoids distracting
+    low-DOS noise behind the ball).
+    """
+    bx, by = float(ball_xy[0]), float(ball_xy[1])
+    xx, yy = np.meshgrid(xgrid, ygrid)
+    forward_sign = 1.0 if attacking_right else -1.0
+    ahead = (xx - bx) * forward_sign > 0.0
+    within_range = np.hypot(xx - bx, yy - by) <= float(max_dist_m)
+    return (ahead & within_range).astype(np.float32)
 
 
 def plot_dos_frame(
@@ -51,6 +80,10 @@ def plot_dos_frame(
     figsize: tuple = (16, 10.4),
     noise_floor: float = 0.0005,
     display_max: float = 0.015,
+    shadow_surface: np.ndarray = None,
+    shadow_noise_floor: float = 0.003,
+    shadow_display_max: float = 0.025,
+    shadow_alpha_max: float = 0.55,
 ) -> plt.Figure:
     """Render one frame with DOS heatmap + players + ball.
 
@@ -76,6 +109,23 @@ def plot_dos_frame(
             with gated DOS at or above this saturate to alpha_max. Fixed
             across frames so the color scale is stable. Default 0.015
             (~ P95 of gated DOS values observed at the goal sequence).
+        shadow_surface: Optional (n_grid_y, n_grid_x) surface holding the
+            "unseen but dangerous" DOS component. Should already be
+            ball-forward-cone-masked by the caller (see
+            `compute_forward_cone_mask`). If None, no shadow layer is
+            rendered. Semantics: `shadow = dos * (1 - memory) * forward_cone`,
+            i.e. diagonal opportunities the on-ball player does NOT see
+            but that lie ahead of the ball in realistic pass / carry range.
+            A Hamilton shadowpass is a pass that actually lands inside a
+            cell lit up by this layer.
+        shadow_noise_floor: Strict lower edge of the shadow smoothstep.
+            Default 0.003 = 6x the visible noise_floor, tuned to suppress
+            low-DOS noise in zones the player simply hasn't scanned yet.
+        shadow_display_max: Upper edge of the shadow smoothstep. Default
+            0.025 (~P95 of the top shadow DOS values observed).
+        shadow_alpha_max: Peak alpha for the shadow layer. Default 0.55,
+            lower than the visible layer so shadow reads clearly as
+            secondary ("what the player could exploit if he scanned").
     """
     if gk_jerseys is None:
         gk_jerseys = {0: 1, 1: 1}
@@ -83,6 +133,11 @@ def plot_dos_frame(
     if scanning_memory.shape != dos_surface.shape:
         raise ValueError(
             f"scanning_memory shape {scanning_memory.shape} does not "
+            f"match DOS surface shape {dos_surface.shape}"
+        )
+    if shadow_surface is not None and shadow_surface.shape != dos_surface.shape:
+        raise ValueError(
+            f"shadow_surface shape {shadow_surface.shape} does not "
             f"match DOS surface shape {dos_surface.shape}"
         )
 
@@ -109,6 +164,25 @@ def plot_dos_frame(
 
     rgba = DOS_CMAP(dos_norm)
     rgba[..., 3] = dos_norm * alpha_max
+
+    # ── Shadow layer (optional) ──────────────────────────────────────
+    # Rendered UNDER the visible DOS (lower z) so visible wins in any
+    # edge-case overlap, although by construction shadow only lives where
+    # the player does NOT see + is ahead of the ball inside pass range.
+    if shadow_surface is not None:
+        sh_pos = np.clip(shadow_surface, 0.0, None).astype(np.float32)
+        sh_edge0 = float(shadow_noise_floor)
+        sh_edge1 = float(max(shadow_display_max, sh_edge0 + 1e-9))
+        ts = np.clip((sh_pos - sh_edge0) / (sh_edge1 - sh_edge0), 0.0, 1.0)
+        sh_norm = (ts * ts * (3.0 - 2.0 * ts)).astype(np.float32)
+        sh_rgba = SHADOW_CMAP(sh_norm)
+        sh_rgba[..., 3] = sh_norm * shadow_alpha_max
+        ax.imshow(
+            sh_rgba, origin="lower",
+            extent=[-52.5, 52.5, -34.0, 34.0],
+            interpolation="spline36",
+            zorder=0, aspect="auto",
+        )
 
     ax.imshow(
         rgba, origin="lower",

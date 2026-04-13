@@ -43,8 +43,18 @@ PPCF_CMAP = LinearSegmentedColormap.from_list(
 )
 
 # Diagonal Opportunity Surface: transparent → cyan → magenta → white
+# "visible" opportunities — inside the on-ball player's FOV + scanned memory.
 DOS_CMAP = LinearSegmentedColormap.from_list(
     "dos", ["#0d1117", "#00d4ff", "#ff00ff", "#ffffff"]
+)
+
+# Shadow DOS: transparent → amber → gold → white.
+# "unseen" opportunities — DOS is high, but the on-ball player does NOT see
+# that cell AND it is ahead of the ball inside realistic pass/carry range.
+# Visually warm so it reads as "latent warning" next to the cold primary DOS
+# layer — if the player still delivers there it is a Hamilton shadowpass.
+SHADOW_CMAP = LinearSegmentedColormap.from_list(
+    "dos_shadow", ["#0d1117", "#5a3500", "#ffb300", "#ffea00", "#ffffff"]
 )
 
 # ── Pitch dimensions (TRACAB, meters, centered) ──────────────────────────

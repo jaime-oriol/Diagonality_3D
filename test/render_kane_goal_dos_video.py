@@ -42,7 +42,7 @@ from src.scanning import (
     compute_scanning_memory_sequence,
     resample_memory_to_grid,
 )
-from src.viz.dos_plot import plot_dos_frame, BG
+from src.viz.dos_plot import plot_dos_frame, compute_forward_cone_mask, BG
 
 MATCH = "Bayern_Hamburg"
 GOAL_F = 3585218  # Kane goal 5 shot frame
@@ -167,6 +167,14 @@ SPATIAL_BLUR_SIGMA_M = 1.5   # gaussian blur on gated DOS, sigma in meters
                              # discrete direction sampling without
                              # erasing the macroscopic blob structure.
 
+# Shadow DOS: "unseen but ahead of ball" layer. Gold cells = diagonal
+# opportunities in the player's offensive arc that he is NOT scanning.
+SHADOW_MAX_DIST_M = 35.0       # realistic pass / carry reach
+SHADOW_NOISE_FLOOR = 0.003     # 6x higher than visible -> only strong
+                               # unseen opportunities light up (no noise)
+SHADOW_DISPLAY_MAX = 0.025
+SHADOW_ALPHA_MAX = 0.55        # secondary visual weight vs visible DOS
+
 # Pre-compute DOS grid coords for memory resampling
 from src.ppcf import PITCH_LENGTH, PITCH_WIDTH
 import numpy as np
@@ -182,10 +190,11 @@ BLUR_SIGMA_CELLS = SPATIAL_BLUR_SIGMA_M / DX
 fig, ax = plt.subplots(figsize=(16, 10.4))
 fig.set_facecolor(BG)
 
-# EMA state for the gated DOS, plus the previous owner so we reset the
-# temporal smoothing whenever possession switches (otherwise the new
-# player's view would be contaminated by the previous owner's gating).
-_ema_state = {"value": None, "owner": None}
+# EMA state for the gated DOS and the shadow DOS, plus the previous
+# owner so we reset the temporal smoothing whenever possession switches
+# (otherwise the new player's view would be contaminated by the previous
+# owner's gating or by shadows that were relevant to the previous carrier).
+_ema_state = {"visible": None, "shadow": None, "owner": None}
 
 
 def render(i):
@@ -212,35 +221,56 @@ def render(i):
         memory_on_dos = np.zeros_like(dos_surf, dtype=np.float32)
         owner = None
 
-    # Apply gate now (so the EMA operates on the final, comparable signal)
-    gated_now = np.clip(dos_surf, 0.0, None).astype(np.float32) * memory_on_dos
+    # Apply gate now (so the EMA operates on the final, comparable signal).
+    # Visible layer: DOS the player sees or has scanned recently.
+    dos_pos = np.clip(dos_surf, 0.0, None).astype(np.float32)
+    gated_now = dos_pos * memory_on_dos
 
-    # Spatial smoothing: gaussian blur over the gated DOS to soften the
-    # cell-level discontinuities created by direction discretization. The
-    # sigma is set in meters and converted to cells, so it stays the same
-    # physical size regardless of N_GRID.
+    # Shadow layer: DOS the player does NOT see BUT is ahead of the ball
+    # and within realistic pass/carry range (no distraction in own half).
+    # Same blur + EMA pipeline as visible, applied to a different signal.
+    forward_mask = compute_forward_cone_mask(
+        ball_xy, attacking_right, XGRID, YGRID,
+        max_dist_m=SHADOW_MAX_DIST_M,
+    )
+    shadow_now = dos_pos * (1.0 - memory_on_dos) * forward_mask
+
+    # Spatial smoothing: gaussian blur (sigma in meters) to soften the
+    # cell-level discontinuities from direction discretization. Applied
+    # independently to both layers.
     gated_now = gaussian_filter(gated_now, sigma=BLUR_SIGMA_CELLS,
                                 mode="constant", cval=0.0).astype(np.float32)
+    shadow_now = gaussian_filter(shadow_now, sigma=BLUR_SIGMA_CELLS,
+                                 mode="constant", cval=0.0).astype(np.float32)
 
-    # Temporal EMA: hard reset on owner change to avoid cross-contamination.
-    prev = _ema_state["value"]
-    if owner != _ema_state["owner"] or prev is None or prev.shape != gated_now.shape:
-        ema = gated_now.copy()
+    # Temporal EMA per layer, hard reset on owner change.
+    prev_v = _ema_state["visible"]
+    prev_s = _ema_state["shadow"]
+    if (owner != _ema_state["owner"]
+            or prev_v is None or prev_v.shape != gated_now.shape):
+        ema_vis = gated_now.copy()
+        ema_sh = shadow_now.copy()
     else:
-        ema = EMA_ALPHA * gated_now + (1.0 - EMA_ALPHA) * prev
-    _ema_state["value"] = ema
+        ema_vis = EMA_ALPHA * gated_now + (1.0 - EMA_ALPHA) * prev_v
+        ema_sh = EMA_ALPHA * shadow_now + (1.0 - EMA_ALPHA) * prev_s
+    _ema_state["visible"] = ema_vis
+    _ema_state["shadow"] = ema_sh
     _ema_state["owner"] = owner
 
-    # The DOS we pass is ALREADY gated (multiplied by memory_on_dos),
-    # blurred and EMA-smoothed. Use a no-op all-ones mask so the
-    # renderer's smoothstep curve operates on this final signal directly.
+    # Both surfaces are ALREADY gated/masked, blurred and EMA-smoothed.
+    # Pass an all-ones scanning_memory so the renderer's smoothstep
+    # operates directly on ema_vis; pass ema_sh as the shadow layer.
     plot_dos_frame(
         fo,
         attacking_team=attacking_team,
         ball_xy=ball_xy,
         attacking_right=attacking_right,
-        dos_surface=ema,
-        scanning_memory=np.ones_like(ema, dtype=np.float32),
+        dos_surface=ema_vis,
+        scanning_memory=np.ones_like(ema_vis, dtype=np.float32),
+        shadow_surface=ema_sh,
+        shadow_noise_floor=SHADOW_NOISE_FLOOR,
+        shadow_display_max=SHADOW_DISPLAY_MAX,
+        shadow_alpha_max=SHADOW_ALPHA_MAX,
         gk_jerseys=gk_jerseys,
         noise_floor=0.0005,
         display_max=0.015,
