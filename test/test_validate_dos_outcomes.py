@@ -67,6 +67,30 @@ def test_split_into_chunks_empty():
     assert v._split_into_chunks(ev, 1000, 10) == []
 
 
+def test_locate_carrier_finds_nearest():
+    fo = pd.DataFrame({
+        "team": [0, 1, 0, 1], "jersey": [5, 7, 10, 9],
+        "x": [0.0, 10.0, 20.0, 5.0],
+        "y": [0.0, 0.0, 0.0, 5.0],
+    })
+    # Point (10.2, 0.1) → jersey 7
+    out = v._locate_carrier(fo, 10.2, 0.1, max_dist=3.0)
+    assert out is not None
+    team, jersey, d = out
+    assert team == 1 and jersey == 7
+    assert d < 0.3
+
+
+def test_locate_carrier_rejects_too_far():
+    fo = pd.DataFrame({"team": [0], "jersey": [5], "x": [0.0], "y": [0.0]})
+    assert v._locate_carrier(fo, 100.0, 100.0, max_dist=3.0) is None
+
+
+def test_locate_carrier_empty_frame():
+    fo = pd.DataFrame({"team": [], "jersey": [], "x": [], "y": []})
+    assert v._locate_carrier(fo, 0.0, 0.0) is None
+
+
 def test_split_into_chunks_preserves_all_rows():
     ev = pd.DataFrame({"parquet_frame": np.arange(0, 50, 2)})
     chunks = v._split_into_chunks(ev, max_frame_span=20, max_events=5)
@@ -268,6 +292,56 @@ def test_build_event_records_returns_sorted_passes_and_carries():
     # Sorted by frame
     pf = ev["parquet_frame"].values
     assert np.all(pf[:-1] <= pf[1:])
+
+
+@pytest.mark.skipif(not HAS_CACHE, reason="cache not present")
+def test_carry_multiframe_returns_valid_result():
+    """Multi-frame carry evaluation runs on a real carry and returns a
+    result with a valid direction_class and a numeric DOS magnitude."""
+    from src.dos import default_params
+    from src.orientation import compute_orientations, add_dynamics
+    ev = pd.read_parquet(CACHE_DIR / "Bayern_Hamburg" / "events.parquet")
+    # Pick the first carry with a reasonable duration (>= 50 frames = 1s)
+    carries = ev[ev["event_type"] == "carry"].copy()
+    carries = carries[
+        carries["parquet_frame_end"].notna() &
+        ((carries["parquet_frame_end"] - carries["parquet_frame"]) >= 50)
+    ].head(1)
+    if len(carries) == 0:
+        pytest.skip("no long carry in Bayern_Hamburg")
+    carry = carries.iloc[0]
+    fs = int(carry["parquet_frame"])
+    fe = int(carry["parquet_frame_end"])
+
+    skel = v._read_skeleton_window("Bayern_Hamburg", fs - 30, fe + 30)
+    ori = compute_orientations(skel, smooth=True)
+    dyn = add_dynamics(ori)
+    dyn = v._smooth_velocities(dyn)
+    by_frame = {f: g for f, g in dyn.groupby("frame_number", sort=False)}
+
+    fo0 = by_frame.get(fs)
+    assert fo0 is not None
+    from src.loader import infer_attacking_team, compute_attacking_right
+    at = infer_attacking_team(float(carry["x"]), float(carry["y"]), fo0, fs)
+    assert at is not None
+    # Mock event namedtuple-like
+    class E:
+        parquet_frame = fs
+        parquet_frame_end = fe
+        x = float(carry["x"]); y = float(carry["y"])
+        x_end = float(carry["x_end"]); y_end = float(carry["y_end"])
+    r = v._evaluate_carry_multiframe(
+        by_frame, E, at, attacking_right=True,
+        params=default_params(),
+    )
+    assert r is not None
+    assert r["direction_class"] in {"forward", "diagonal", "sideways"}
+    assert -1.0 <= r["dos"] <= 1.0
+    assert r["n_samples_used"] >= 1
+    # `dos` is the peak (max by signed value) over samples; mean can be
+    # below it but must be within the same [-1, 1] magnitude range.
+    assert r["dos"] >= r["dos_mean"] - 1e-6
+    assert -1.0 <= r["dos_mean"] <= 1.0
 
 
 @pytest.mark.skipif(not HAS_CACHE, reason="cache not present")

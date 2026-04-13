@@ -64,6 +64,16 @@ EVENT_TYPES = ("pass", "carry")
 FRAME_PAD = 25               # frames before/after each chunk for vel smoothing
 DEFAULT_MAX_FRAME_SPAN = 30000   # ~10 min of game @ 50fps; ~3-5M skeleton rows
 DEFAULT_MAX_CHUNK_EVENTS = 250   # safety cap on events per chunk
+
+# --- Carry multi-frame DOS ---------------------------------------------
+CARRY_N_SAMPLES = 5          # frames sampled uniformly along [fs, fe]
+CARRY_VIRTUAL_HORIZON_S = 1.0  # virtual-destination look-ahead in seconds
+CARRY_MIN_SPEED = 0.8        # m/s: below this, carrier is "stationary",
+                             # velocity direction is meaningless -> skip frame
+CARRY_MIN_HORIZON_M = 3.0    # floor on virtual-destination distance (even
+                             # for slow carries, evaluate DOS at 3m ahead)
+MIN_CARRY_DURATION_FRAMES = 10   # carries shorter than this fall back to
+                                 # start->end vector (not enough samples)
 RNG = np.random.default_rng(42)
 
 PITCH_X = 105.0
@@ -167,6 +177,117 @@ def _build_event_records(match: str, sample: Optional[int]) -> pd.DataFrame:
     return ev
 
 
+def _locate_carrier(fo: pd.DataFrame, cx: float, cy: float,
+                    max_dist: float = 3.0) -> Optional[tuple]:
+    """Find (team, jersey) of the skeleton player closest to (cx, cy) at
+    the start frame of a carry. Same idea as `infer_attacking_team` but
+    returns the jersey too, so the caller can track that specific player
+    through later frames of the carry trajectory."""
+    if len(fo) == 0:
+        return None
+    d = np.hypot(fo["x"].values - cx, fo["y"].values - cy)
+    i = int(np.argmin(d))
+    if d[i] > max_dist:
+        return None
+    row = fo.iloc[i]
+    return int(row["team"]), int(row["jersey"]), float(d[i])
+
+
+def _evaluate_carry_multiframe(
+    dyn_by_frame: dict,
+    carry,               # event namedtuple
+    attacking_team: int,
+    attacking_right: bool,
+    params: dict,
+) -> Optional[dict]:
+    """Multi-frame DOS evaluation for a carry.
+
+    For each of N samples taken uniformly along [fs, fe], evaluate DOS
+    using the **carrier's instantaneous velocity direction from the
+    skeleton** as the event direction and a virtual destination
+    `pos + vel * horizon_s` as the target cell. Aggregate with `max` —
+    the peak diagonal moment of the carry trajectory. Falls back to the
+    naive start→end vector if no frame has a usable velocity sample
+    (very short / stationary carries)."""
+    fs = int(carry.parquet_frame)
+    fe_val = getattr(carry, "parquet_frame_end", None)
+    fe = int(fe_val) if (fe_val is not None and pd.notna(fe_val)
+                         and fe_val > fs) else fs
+    duration = fe - fs
+    fo0 = dyn_by_frame.get(fs)
+    if fo0 is None or len(fo0) < 6:
+        return None
+
+    # Identify the carrier via skeleton proximity at the start frame.
+    loc = _locate_carrier(fo0, float(carry.x), float(carry.y), max_dist=3.0)
+    if loc is None:
+        return None
+    team, jersey, _ = loc
+
+    # If the carry is too short to sample reliably, fall back.
+    if duration < MIN_CARRY_DURATION_FRAMES:
+        return None
+
+    # Uniformly spaced frames across [fs, fe]
+    sample_frames = np.linspace(fs, fe, CARRY_N_SAMPLES).astype(int)
+
+    results = []
+    for sf in sample_frames:
+        fo = dyn_by_frame.get(int(sf))
+        if fo is None:
+            continue
+        me = fo[(fo["team"] == team) & (fo["jersey"] == jersey)]
+        if len(me) == 0:
+            continue
+        m = me.iloc[0]
+        px, py = float(m["x"]), float(m["y"])
+        vx = float(m["vx"]) if pd.notna(m["vx"]) else 0.0
+        vy = float(m["vy"]) if pd.notna(m["vy"]) else 0.0
+        speed = float(np.hypot(vx, vy))
+        if speed < CARRY_MIN_SPEED:
+            # Carrier stationary at this sample; no defined direction
+            continue
+        # Virtual destination: look ahead along the instantaneous velocity
+        # direction. Use `max(horizon_s * speed, min_horizon_m)` so slow
+        # carries still evaluate DOS at a reasonable lookahead.
+        horizon_m = max(CARRY_VIRTUAL_HORIZON_S * speed, CARRY_MIN_HORIZON_M)
+        dir_x, dir_y = vx / speed, vy / speed
+        tx = px + horizon_m * dir_x
+        ty = py + horizon_m * dir_y
+        evd = {
+            "event_type": "carry", "x": px, "y": py,
+            "carry_end_x": tx, "carry_end_y": ty,
+        }
+        try:
+            r = dos_for_event(
+                fo, evd, attacking_team, attacking_right,
+                params=params, vision_smoothing=VISION_SMOOTHING,
+            )
+        except Exception:
+            continue
+        results.append(r)
+
+    if not results:
+        return None
+
+    # Aggregate: peak diagonal moment of the trajectory.
+    best = max(results, key=lambda r: r["dos"])
+    mean_dos = float(np.mean([r["dos"] for r in results]))
+    mean_aw = float(np.mean([r["awareness_mean"] for r in results]))
+    mean_delay = float(np.mean([r["detection_delay_mean"] for r in results]))
+    return {
+        "dos": best["dos"],
+        "dos_mean": mean_dos,
+        "ppcf_att_baseline": best["ppcf_att_baseline"],
+        "ppcf_att_with_awareness": best["ppcf_att_with_awareness"],
+        "direction_class": best["direction_class"],
+        "event_direction": best["event_direction"],
+        "awareness_mean": mean_aw,
+        "detection_delay_mean": mean_delay,
+        "n_samples_used": len(results),
+    }
+
+
 def _process_chunk(
     match: str,
     ev_chunk: pd.DataFrame,
@@ -176,8 +297,13 @@ def _process_chunk(
     """Compute DOS for one frame-bounded batch of events."""
     if len(ev_chunk) == 0:
         return []
+    # Extend f_max by the longest carry end-frame in the chunk so the
+    # skeleton load covers the full carry trajectory (needed for the
+    # multi-frame sampling below).
     f_min = int(ev_chunk["parquet_frame"].min()) - FRAME_PAD
-    f_max = int(ev_chunk["parquet_frame"].max()) + FRAME_PAD
+    carry_ends = ev_chunk["parquet_frame_end"].dropna()
+    carry_end_max = int(carry_ends.max()) if len(carry_ends) else 0
+    f_max = max(int(ev_chunk["parquet_frame"].max()), carry_end_max) + FRAME_PAD
 
     skel = _read_skeleton_window(match, f_min, f_max)
     if len(skel) == 0:
@@ -213,25 +339,42 @@ def _process_chunk(
             attacking_team, int(e.half), e.ctx_home_gk_left_p1)
 
         if e.event_type == "carry":
-            evd = {
-                "event_type": "carry", "x": e.x, "y": e.y,
-                "carry_end_x": e.x_end, "carry_end_y": e.y_end,
-            }
+            # Multi-frame DOS: instantaneous velocity direction per sample
+            # + virtual destination `pos + vel*horizon`. Aggregate with max.
+            r = _evaluate_carry_multiframe(
+                dyn_by_frame, e, attacking_team, attacking_right, params)
+            if r is None:
+                # Fallback: single-frame evaluation with start->end vector
+                # (same as the old behaviour for very short carries).
+                evd = {
+                    "event_type": "carry", "x": e.x, "y": e.y,
+                    "carry_end_x": e.x_end, "carry_end_y": e.y_end,
+                }
+                try:
+                    r = dos_for_event(
+                        fo, evd, attacking_team, attacking_right,
+                        params=params, vision_smoothing=VISION_SMOOTHING,
+                    )
+                    r["n_samples_used"] = 0  # marker: fallback path
+                    r["dos_mean"] = r["dos"]
+                except Exception:
+                    continue
             dest_x, dest_y = e.x_end, e.y_end
         else:
             evd = {
                 "event_type": "pass", "x": e.x, "y": e.y,
                 "x_receiver": e.x_receiver, "y_receiver": e.y_receiver,
             }
+            try:
+                r = dos_for_event(
+                    fo, evd, attacking_team, attacking_right,
+                    params=params, vision_smoothing=VISION_SMOOTHING,
+                )
+                r["n_samples_used"] = 1  # passes are single-frame by design
+                r["dos_mean"] = r["dos"]
+            except Exception:
+                continue
             dest_x, dest_y = e.x_receiver, e.y_receiver
-
-        try:
-            r = dos_for_event(
-                fo, evd, attacking_team, attacking_right,
-                params=params, vision_smoothing=VISION_SMOOTHING,
-            )
-        except Exception:
-            continue
 
         if e.event_type == "carry":
             dist = float(np.hypot(e.x_end - e.x, e.y_end - e.y))
@@ -251,6 +394,8 @@ def _process_chunk(
             "attacking_team": attacking_team,
             "attacking_right": bool(attacking_right),
             "dos": r["dos"],
+            "dos_mean": r.get("dos_mean", r["dos"]),
+            "n_samples_used": r.get("n_samples_used", 1),
             "ppcf_baseline": r["ppcf_att_baseline"],
             "ppcf_with_awareness": r["ppcf_att_with_awareness"],
             "direction_class": r["direction_class"],
@@ -404,7 +549,7 @@ def _quintiles(df: pd.DataFrame) -> pd.DataFrame:
         "Q1 (lowest)", "Q2", "Q3", "Q4", "Q5 (highest)"], duplicates="drop")
     rows = []
     for q, g in sub.groupby("dos_q", observed=True):
-        succ = (g["evaluation"] == "successfullyCompleted").astype(float).values
+        succ = (g["evaluation"] .isin({"successfullyCompleted", "successful"})).astype(float).values
         brk = g["back_line_break"].astype(float).values
         chc = (g["parent_possession_xg"] > 0).astype(float).values
         rows.append({
@@ -425,7 +570,7 @@ def _quintiles(df: pd.DataFrame) -> pd.DataFrame:
 def _direction_breakdown(df: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for cls, g in df.groupby("direction_class"):
-        succ = (g["evaluation"] == "successfullyCompleted").astype(float).values
+        succ = (g["evaluation"] .isin({"successfullyCompleted", "successful"})).astype(float).values
         brk = g["back_line_break"].astype(float).values
         chc = (g["parent_possession_xg"] > 0).astype(float).values
         rows.append({
@@ -714,7 +859,7 @@ def run_validation(matches: List[str], sample: Optional[int],
     print(f"\nRaw rows: {len(df):,} -> {out_csv}")
 
     df["chance"] = df["parent_possession_xg"] > 0
-    df["success"] = df["evaluation"] == "successfullyCompleted"
+    df["success"] = df["evaluation"] .isin({"successfullyCompleted", "successful"})
 
     mw_results = [
         _mann_whitney(df, df["chance"], "led_to_chance (xg>0)"),

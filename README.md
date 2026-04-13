@@ -44,7 +44,14 @@ Diagonality_3D/
 ├── cache/                       # Git-ignored (preprocessed per match)
 ├── data/                        # Git-ignored (~20GB hackathon data)
 ├── references/                  # Git-ignored (Bekkers code)
-├── test/                        # Git-ignored (render scripts + sample outputs)
+├── test/                        # Git-ignored — scripts + validation + tests
+│   ├── validate_dos_outcomes.py        # Empirical validation of DOS over 5 matches
+│   ├── fix_carry_possession_link.py    # Post-process: link carries to possessions
+│   ├── test_validate_dos_outcomes.py   # 29 unit + integration tests
+│   ├── test_possession.py, test_scanning.py, test_dos_gate.py
+│   ├── test_integration_real_cache.py  # Against real Bayern_Hamburg cache
+│   ├── regenerate_caches.py            # WSL-safe cache rebuild (PRE_WINDOW=150)
+│   └── render_kane_goal*.py            # Vision / PPCF / DOS video renderers
 └── figures/                     # Pre-rendered outputs
 ```
 
@@ -63,6 +70,8 @@ The analysis runs as a four-stage pipeline:
 **Stage 4 — Immediate Orientation-Aware PPCF and Diagonal Opportunity Surfaces.** Each player is modelled as an anisotropic Gaussian reach field centred on themselves, with sigma derived from the orientation-aware biomechanical delay: Vater (2024) reaction time + Dos'Santos (2018) change-of-direction deficit, applied to the real shoulder angle from the 3D skeleton. A defender with the ball in their blind spot literally has a hole in their reach field, and diagonals exploit it. From this, compute Diagonal Opportunity Surfaces showing where on the pitch a diagonal action gains the most control advantage.
 
 **Scanning gate (cognitive layer).** A frame-exact possession timeline (carries + passes linked to receptions via play_id) tells us, at every frame, which player is on-ball. The on-ball player's full Bekkers vision plus a 2.5 s exponentially-decayed scanning memory is used to gate the DOS surface: only cells the player can SEE or has scanned recently are painted. The lookback grows linearly from zero at the moment a new player becomes on-ball, so the receiver never inherits the passer's pre-pass scanning context. The renderer applies a 1.5 m gaussian blur and a temporal EMA across frames (alpha=0.10, ~140 ms half-life) for visual readability, then maps the result onto a fixed display range via a smoothstep visibility curve and spline36 interpolation — no flicker, no on/off cliffs. Requires the cache to be generated with `PRE_WINDOW_FRAMES >= 150` (3 s) so the lookback is fully covered; run `test/regenerate_caches.py` to (re)build it.
+
+**Empirical validation.** `test/validate_dos_outcomes.py` evaluates DOS over every pass and carry of the 5 cached matches (~6.7k events) and cross-tabulates against real outcomes from kpi_data (`evaluation`, `back_line_break`, `bypassed_defenders`, parent possession `sum_xg_ind`). The model receives **no xG, no xT, no success labels** as inputs — only geometry + skeleton orientation + the Bekkers vision model. Carries use a multi-frame DOS path (5 uniformly-spaced samples along the trajectory, instantaneous skeleton velocity direction, virtual destination `pos + vel * 1s`, aggregated with max) because a carry's start→end vector does not represent its real direction. Memory-safe via pyarrow predicate-pushdown chunks (~1.6 GB peak, ~25 min total for the 5 matches). `test/fix_carry_possession_link.py` post-processes the raw CSV to fix a DFL XML quirk where `TeamPossession > PossessionEvent` never lists carry event IDs — the fix links carries to their parent possession by frame-range containment. Outputs: `test/dos_validation_raw_fixed.csv`, `test/dos_validation_quintiles_fixed.png`, `test/dos_validation_report_fixed.md`.
 
 ---
 
