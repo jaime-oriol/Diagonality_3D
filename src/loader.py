@@ -295,6 +295,112 @@ def load_receptions(match: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+# --- Take-ons (TacklingGame, attacker wins) -------------------------------
+
+# WinnerResult values that count as a "real" successful take-on:
+#   - dribbledAround:        attacker explicitly dribbled around defender
+#   - ballControlRetained:   attacker kept ball through a contest
+#   - ballcontactSucceeded:  attacker won the contact and kept ball
+# Excluded WinnerResult values (still WinnerRole=withBallControl but NOT
+# the SV "diagonal touch" we care about):
+#   - layoff:                attacker received and passed back, not a regate
+#   - fouled:                defender fouled the attacker (not skill)
+TAKEON_OK_RESULTS = frozenset({
+    "dribbledAround",
+    "ballControlRetained",
+    "ballcontactSucceeded",
+})
+
+
+def load_takeons(match: str) -> pd.DataFrame:
+    """Load successful take-ons (1v1 duels won by the attacker WITH ball).
+
+    Source:
+      - Events_*.xml provides the rich attributes (WinnerRole, WinnerResult,
+        DribblingType, DribbleEvaluation, DribblingSide).
+      - kpi_data_*.xml provides the sync info (SyncedFrameId, X-Position,
+        Y-Position) that the Events XML lacks.
+
+    Both files share `EventId` so we join one-to-one. We keep only
+    take-ons whose attacker (WinnerPlayer) kept ball control AND the
+    duel resolved as a real take-on (see TAKEON_OK_RESULTS).
+
+    Returns a DataFrame with one row per take-on and columns:
+        event_id, team_id (winner), player_id (winner), opponent_id (loser),
+        half, synced_frame_id, x, y,
+        winner_result, dribbling_type, dribbling_side, dribble_evaluation,
+        type, possession_change, foul_won (=loser_result fouled).
+    Coordinates in METERS (TRACAB convention, centered).
+    """
+    events_path = MATCH_DIR / match / f"Events_{match}.xml"
+    kpi = kpi_path(match)
+
+    # Pass 1: rich attributes from Events XML keyed by event_id
+    rich = {}
+    for event_elem in ET.parse(events_path).getroot().iter("Event"):
+        tg = event_elem.find("TacklingGame")
+        if tg is None:
+            continue
+        if tg.get("WinnerRole") != "withBallControl":
+            continue
+        wres = tg.get("WinnerResult", "")
+        if wres not in TAKEON_OK_RESULTS:
+            continue
+        eid = tg.get("EventId") or event_elem.get("EventId")
+        if eid is None:
+            continue
+        rich[eid] = {
+            "winner_id": tg.get("Winner", ""),
+            "winner_team": tg.get("WinnerTeam", ""),
+            "loser_id": tg.get("Loser", ""),
+            "loser_team": tg.get("LoserTeam", ""),
+            "type": tg.get("Type", ""),
+            "winner_result": wres,
+            "dribbling_type": tg.get("DribblingType", ""),
+            "dribbling_side": tg.get("DribblingSide", ""),
+            "dribble_evaluation": tg.get("DribbleEvaluation", ""),
+            "possession_change": tg.get("PossessionChange") == "true",
+        }
+
+    # Pass 2: sync + position from kpi_data, joined on EventId
+    rows = []
+    for event_elem in ET.parse(kpi).getroot().iter("Event"):
+        tg = event_elem.find("TacklingGame")
+        if tg is None:
+            continue
+        eid = tg.get("EventId") or event_elem.get("EventId")
+        if eid is None or eid not in rich:
+            continue
+        if tg.get("SyncSuccessful") != "true":
+            continue
+        synced = tg.get("SyncedFrameId")
+        if synced is None:
+            continue
+        section = tg.get("InGameSection", "")
+        half = 1 if "first" in section.lower() else 2
+
+        meta = rich[eid]
+        rows.append({
+            "event_id": eid,
+            "team_id": meta["winner_team"],
+            "player_id": meta["winner_id"],
+            "opponent_id": meta["loser_id"],
+            "opponent_team": meta["loser_team"],
+            "half": half,
+            "synced_frame_id": int(synced),
+            "x": safe_float(tg.get("X-Position")),
+            "y": safe_float(tg.get("Y-Position")),
+            "type": meta["type"],
+            "winner_result": meta["winner_result"],
+            "dribbling_type": meta["dribbling_type"],
+            "dribbling_side": meta["dribbling_side"],
+            "dribble_evaluation": meta["dribble_evaluation"],
+            "possession_change": meta["possession_change"],
+        })
+
+    return pd.DataFrame(rows)
+
+
 # --- MatchInformations XML (formations, positions) ------------------------
 
 def load_match_info(match: str) -> Dict:

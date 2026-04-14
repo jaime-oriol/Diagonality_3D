@@ -50,8 +50,11 @@ import pyarrow.parquet as pq
 from scipy.signal import savgol_filter
 from scipy.stats import mannwhitneyu
 
-from src.loader import MATCHES, compute_attacking_right, infer_attacking_team
-from src.preprocess import load_cached_events, CACHE_DIR
+from src.loader import (
+    MATCHES, compute_attacking_right, infer_attacking_team,
+    load_takeons, synced_frame_to_parquet,
+)
+from src.preprocess import load_cached_events, load_cached_metadata, CACHE_DIR
 from src.orientation import compute_orientations, add_dynamics
 from src.dos import dos_for_event, default_params
 
@@ -60,7 +63,10 @@ from src.dos import dos_for_event, default_params
 VISION_SMOOTHING = 1.0       # cheap; render uses 1.0 inside compute_dos_surface
 SMOOTH_W, POLY = 13, 1       # Savitzky-Golay for vx, vy (matches render)
 MAX_SPEED = 12.0
-EVENT_TYPES = ("pass", "carry")
+EVENT_TYPES = ("pass", "carry", "takeon")
+TAKEON_VIRTUAL_HORIZON_S = 1.0   # same convention as multi-frame carry sample
+TAKEON_MIN_SPEED = 0.6           # m/s: below this, fall back to forward axis
+TAKEON_MIN_HORIZON_M = 3.0       # floor on virtual-destination distance
 FRAME_PAD = 25               # frames before/after each chunk for vel smoothing
 DEFAULT_MAX_FRAME_SPAN = 30000   # ~10 min of game @ 50fps; ~3-5M skeleton rows
 DEFAULT_MAX_CHUNK_EVENTS = 250   # safety cap on events per chunk
@@ -148,15 +154,48 @@ def _zone_of(x: float, y: float) -> str:
 
 # ── Per-match processing ────────────────────────────────────────────────
 
+def _load_takeon_events(match: str) -> pd.DataFrame:
+    """Load successful take-ons + convert SyncedFrameId -> parquet_frame.
+    Returns a DataFrame with the same column shape as cached pass/carry
+    events (event_type='takeon'), so it can be concatenated with them."""
+    raw = load_takeons(match)
+    if len(raw) == 0:
+        return raw
+    metadata = load_cached_metadata(match)
+    raw["parquet_frame"] = raw.apply(
+        lambda r: synced_frame_to_parquet(int(r["synced_frame_id"]), metadata,
+                                          int(r["half"])),
+        axis=1,
+    )
+    raw["event_type"] = "takeon"
+    # Match the cached events parquet schema: receiver/end fields are NaN
+    for col in ["x_receiver", "y_receiver", "x_end", "y_end",
+                "parquet_frame_end", "play_angle", "distance",
+                "pressure_player", "num_defenders_passing_lane",
+                "num_defenders_goal_side", "bypassed_defenders",
+                "back_line_break", "through_ball", "evaluation",
+                "xp", "play_id"]:
+        if col not in raw.columns:
+            raw[col] = np.nan
+    raw["evaluation"] = "successfullyCompleted"  # take-on succeeded by definition
+    raw["back_line_break"] = False
+    raw["through_ball"] = False
+    return raw
+
+
 def _build_event_records(match: str, sample: Optional[int]) -> pd.DataFrame:
     """Load + filter cached events. The home/away mapping is NOT needed here:
     `attacking_team` is inferred per event from the skeleton (nearest player
     to the event position) inside `_process_chunk`. That keeps the script
-    fully cache-driven and independent of the raw XML."""
+    fully cache-driven and independent of the raw XML.
+
+    Also loads successful take-ons live from Events_*.xml + kpi_data via
+    `load_takeons` and concatenates them with the cached pass/carry events
+    so they go through the same chunked DOS evaluation pipeline."""
     home_gk_left_p1 = _load_metadata_home_gk_left_p1(match)
 
     events = load_cached_events(match)
-    ev = events[events["event_type"].isin(EVENT_TYPES)].copy()
+    ev = events[events["event_type"].isin(("pass", "carry"))].copy()
     ev = ev[ev["parquet_frame"].notna() & (ev["parquet_frame"] > 0)]
     ev["parquet_frame"] = ev["parquet_frame"].astype(int)
 
@@ -166,6 +205,18 @@ def _build_event_records(match: str, sample: Optional[int]) -> pd.DataFrame:
         | ((~is_pass) & ev["x_end"].notna() & ev["y_end"].notna())
     )
     ev = ev[has_dest].reset_index(drop=True)
+
+    # Live-load take-ons (not in the cached events.parquet, see loader.py)
+    takeons = _load_takeon_events(match)
+    if len(takeons):
+        takeons = takeons[takeons["parquet_frame"] > 0].copy()
+        takeons["parquet_frame"] = takeons["parquet_frame"].astype(int)
+        # Align columns: keep what `ev` has, fill missing with NaN.
+        for col in ev.columns:
+            if col not in takeons.columns:
+                takeons[col] = np.nan
+        takeons = takeons[ev.columns]
+        ev = pd.concat([ev, takeons], ignore_index=True)
 
     if sample is not None and len(ev) > sample:
         idx = np.sort(RNG.choice(len(ev), size=sample, replace=False))
@@ -288,6 +339,72 @@ def _evaluate_carry_multiframe(
     }
 
 
+def _evaluate_takeon(
+    fo: pd.DataFrame,
+    takeon,                # event namedtuple from itertuples
+    attacking_team: int,
+    attacking_right: bool,
+    params: dict,
+) -> Optional[dict]:
+    """Single-frame DOS for a successful take-on.
+
+    The take-on is a discrete <1s event so multi-frame sampling is not
+    needed. We use the **instantaneous skeleton velocity of the WINNER**
+    at the take-on frame as the action direction, with a virtual
+    destination `pos + vel * 1s` (same convention as multi-frame carry
+    samples). If the winner is essentially stationary at the duel frame,
+    we fall back to the goal-direction so the event still produces a
+    valid DOS reading rather than being dropped.
+    """
+    if fo is None or len(fo) < 6:
+        return None
+    px, py = float(takeon.x), float(takeon.y)
+
+    # Locate the WinnerPlayer skeleton: look at the nearest player to the
+    # take-on (x, y) belonging to the attacking team. In a 1v1 the two
+    # players are often near-equidistant, so we explicitly restrict by
+    # team_int rather than blindly taking the closest skeleton point.
+    team_pl = fo[fo["team"] == attacking_team]
+    if len(team_pl) == 0:
+        return None
+    d = np.hypot(team_pl["x"].values - px, team_pl["y"].values - py)
+    idx = int(np.argmin(d))
+    if d[idx] > 5.0:
+        return None  # winner not within 5m of the duel — data anomaly
+    me = team_pl.iloc[idx]
+    vx = float(me["vx"]) if pd.notna(me.get("vx")) else 0.0
+    vy = float(me["vy"]) if pd.notna(me.get("vy")) else 0.0
+    speed = float(np.hypot(vx, vy))
+
+    if speed >= TAKEON_MIN_SPEED:
+        horizon_m = max(TAKEON_VIRTUAL_HORIZON_S * speed, TAKEON_MIN_HORIZON_M)
+        dir_x, dir_y = vx / speed, vy / speed
+    else:
+        # Stationary fallback: aim at the attacking goal.
+        forward_sign = 1.0 if attacking_right else -1.0
+        dir_x, dir_y = forward_sign, 0.0
+        horizon_m = TAKEON_MIN_HORIZON_M
+
+    tx = px + horizon_m * dir_x
+    ty = py + horizon_m * dir_y
+    evd = {
+        "event_type": "carry", "x": px, "y": py,
+        "carry_end_x": tx, "carry_end_y": ty,
+    }
+    try:
+        r = dos_for_event(
+            fo, evd, attacking_team, attacking_right,
+            params=params, vision_smoothing=VISION_SMOOTHING,
+        )
+    except Exception:
+        return None
+    r["n_samples_used"] = 1
+    r["dos_mean"] = r["dos"]
+    r["takeon_dest_x"] = tx
+    r["takeon_dest_y"] = ty
+    return r
+
+
 def _process_chunk(
     match: str,
     ev_chunk: pd.DataFrame,
@@ -320,25 +437,55 @@ def _process_chunk(
     gc.collect()
 
     rows = []
+    # Build a per-chunk team_id (DFL-CLU-*) -> team_int (0/1) cache as we
+    # process pass/carry events. This is then used for take-ons, where the
+    # nearest skeleton player to the duel position can be EITHER attacker
+    # or defender (both in close range), making proximity-based inference
+    # unreliable. Pass/carry events have the (x,y) at the actor's foot
+    # so proximity is reliable for them.
+    team_id_to_int: dict = {}
     for e in ev_chunk.itertuples(index=False):
         f = int(e.parquet_frame)
         fo = dyn_by_frame.get(f)
         if fo is None or len(fo) < 6:
             continue
 
-        # Determine attacking team via skeleton proximity (no XML needed).
-        # `infer_attacking_team` looks for the player closest to (x, y) in
-        # the orientations frame and returns its team integer (0/1, where
-        # 1 = home in the skeleton convention). Falls back to None if no
-        # player is within 3 m of the event position.
-        attacking_team = infer_attacking_team(
-            float(e.x), float(e.y), fo, f, max_dist=3.0)
-        if attacking_team is None:
-            continue
+        if e.event_type == "takeon":
+            # Need the team_int of the WINNER. Use the chunk-level cache
+            # built from previously-processed pass/carry events. If the
+            # team_id hasn't been seen yet, fall back to proximity (best
+            # effort — works correctly when the winner happens to be the
+            # nearest skeleton player to the duel).
+            if e.team_id in team_id_to_int:
+                attacking_team = team_id_to_int[e.team_id]
+            else:
+                attacking_team = infer_attacking_team(
+                    float(e.x), float(e.y), fo, f, max_dist=5.0)
+                if attacking_team is None:
+                    continue
+        else:
+            # Pass / carry: (x, y) is the actor's foot, proximity is
+            # reliable. Cache the team_id mapping for take-ons later.
+            attacking_team = infer_attacking_team(
+                float(e.x), float(e.y), fo, f, max_dist=3.0)
+            if attacking_team is None:
+                continue
+            if e.team_id not in team_id_to_int:
+                team_id_to_int[e.team_id] = attacking_team
+
         attacking_right = compute_attacking_right(
             attacking_team, int(e.half), e.ctx_home_gk_left_p1)
 
-        if e.event_type == "carry":
+        if e.event_type == "takeon":
+            # Single-frame DOS using the WinnerPlayer's instantaneous
+            # skeleton velocity at the duel frame.
+            r = _evaluate_takeon(
+                fo, e, attacking_team, attacking_right, params)
+            if r is None:
+                continue
+            dest_x = r.get("takeon_dest_x", e.x)
+            dest_y = r.get("takeon_dest_y", e.y)
+        elif e.event_type == "carry":
             # Multi-frame DOS: instantaneous velocity direction per sample
             # + virtual destination `pos + vel*horizon`. Aggregate with max.
             r = _evaluate_carry_multiframe(
@@ -378,6 +525,12 @@ def _process_chunk(
 
         if e.event_type == "carry":
             dist = float(np.hypot(e.x_end - e.x, e.y_end - e.y))
+            pressure = float("nan")
+        elif e.event_type == "takeon":
+            # Take-on is a 1v1 at a point — "distance" is the virtual
+            # destination (where the winner is heading) used for the DOS
+            # eval. Pressure is implicit in the duel itself, set NaN.
+            dist = float(np.hypot(dest_x - e.x, dest_y - e.y))
             pressure = float("nan")
         else:
             dist = float(e.distance) if pd.notna(e.distance) else float(
@@ -601,6 +754,31 @@ def _zone_breakdown(df: pd.DataFrame, col: str) -> pd.DataFrame:
     return pd.DataFrame(rows).set_index("zone").reindex(["center", "half_space", "wing"]).dropna(how="all")
 
 
+def _per_event_type(df: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate stats per event_type (pass / carry / takeon).
+
+    Take-ons are SV's purest "diagonal moment" so we want them broken out
+    explicitly; carries are multi-frame; passes are single-frame. Each
+    family has its own DOS distribution and outcome characteristics."""
+    rows = []
+    for et, g in df.groupby("event_type"):
+        succ = g["evaluation"].isin({"successfullyCompleted", "successful"})
+        rows.append({
+            "event_type": et,
+            "n": int(len(g)),
+            "dos_mean": float(g["dos"].mean()),
+            "dos_median": float(g["dos"].median()),
+            "dos_pos_rate": float((g["dos"] > 0).mean()),
+            "success_rate": float(succ.mean()),
+            "line_break_rate": float(g["back_line_break"].mean()),
+            "chance_rate": float((g["parent_possession_xg"] > 0).mean()),
+            "awareness_mean": float(g["awareness_mean"].mean()),
+            "diag_share": float((g["direction_class"] == "diagonal").mean()),
+            "fwd_share": float((g["direction_class"] == "forward").mean()),
+        })
+    return pd.DataFrame(rows).set_index("event_type")
+
+
 def _per_match(df: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for m, g in df.groupby("match"):
@@ -672,6 +850,7 @@ def _write_report(
     direction_table: pd.DataFrame,
     zone_origin_table: pd.DataFrame,
     zone_dest_table: pd.DataFrame,
+    per_event_type: pd.DataFrame,
     per_match: pd.DataFrame,
     out_path: Path,
     elapsed: float,
@@ -805,6 +984,18 @@ def _write_report(
     lines.append("```")
     lines.append("")
 
+    lines.append("## Per-event-type breakdown (passes / carries / take-ons)")
+    lines.append("")
+    lines.append("Take-ons (1v1 duels won by the attacker keeping the ball) "
+                 "are SV's purest 'diagonal moment' — Hamilton's regate, the "
+                 "shoulder-drop. Single-frame DOS using the attacker's "
+                 "instantaneous skeleton velocity at the duel frame.")
+    lines.append("")
+    lines.append("```")
+    lines.append(per_event_type.to_string())
+    lines.append("```")
+    lines.append("")
+
     lines.append("## Per-match consistency")
     lines.append("")
     lines.append("If DOS captures a real causal mechanism, the pattern "
@@ -862,13 +1053,22 @@ def run_validation(matches: List[str], sample: Optional[int],
     df["success"] = df["evaluation"] .isin({"successfullyCompleted", "successful"})
 
     mw_results = [
-        _mann_whitney(df, df["chance"], "led_to_chance (xg>0)"),
-        _mann_whitney(df, df["back_line_break"], "back_line_break"),
+        _mann_whitney(df, df["chance"], "led_to_chance (xg>0) — ALL"),
+        _mann_whitney(df, df["back_line_break"], "back_line_break — ALL"),
         _mann_whitney(df[df["event_type"] == "pass"],
                       df.loc[df["event_type"] == "pass", "success"],
                       "successfully_completed (passes)"),
-        _mann_whitney(df, df["through_ball"], "through_ball"),
+        _mann_whitney(df, df["through_ball"], "through_ball — ALL"),
     ]
+    # Per-event-type led_to_chance: passes already drive most of the
+    # signal; carries and take-ons get tested separately so the report
+    # makes the contribution of each family explicit.
+    for et in ("pass", "carry", "takeon"):
+        sub = df[df["event_type"] == et]
+        if len(sub) >= 50:
+            mw_results.append(
+                _mann_whitney(sub, sub["chance"], f"led_to_chance — {et}s only")
+            )
 
     log_results = [
         _logistic(df, "back_line_break",
@@ -885,6 +1085,7 @@ def run_validation(matches: List[str], sample: Optional[int],
     direction_table = _direction_breakdown(df)
     zone_origin = _zone_breakdown(df, "origin_zone")
     zone_dest = _zone_breakdown(df, "dest_zone")
+    per_event_type = _per_event_type(df)
     per_match = _per_match(df)
 
     print("\n=== Mann-Whitney U ===")
@@ -901,7 +1102,7 @@ def run_validation(matches: List[str], sample: Optional[int],
     elapsed = time.time() - t0
     _write_report(
         df, mw_results, log_results, quintiles, direction_table,
-        zone_origin, zone_dest, per_match,
+        zone_origin, zone_dest, per_event_type, per_match,
         Path("test/dos_validation_report.md"),
         elapsed,
     )

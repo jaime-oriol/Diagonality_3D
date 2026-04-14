@@ -91,6 +91,99 @@ def test_locate_carrier_empty_frame():
     assert v._locate_carrier(fo, 0.0, 0.0) is None
 
 
+def _takeon_fixture_full():
+    """Minimal but >=6 player frame so _evaluate_takeon's frame-size guard
+    doesn't trip. Attacker at (0,0) moving +x at 5 m/s; defender alongside
+    facing back; teammates and other defenders scattered."""
+    rows = [
+        {"team": 1, "jersey": 11, "x": 0.0, "y": 0.0,
+         "head_angle": 0.0, "shoulder_angle": 0.0, "shoulder_width": 0.45,
+         "speed": 5.0, "vx": 5.0, "vy": 0.0},
+        {"team": 0, "jersey": 7, "x": 1.0, "y": 0.0,
+         "head_angle": np.pi, "shoulder_angle": np.pi, "shoulder_width": 0.45,
+         "speed": 0.5, "vx": -0.5, "vy": 0.0},
+        {"team": 1, "jersey": 12, "x": 30.0, "y": 0.0,
+         "head_angle": 0.0, "shoulder_angle": 0.0, "shoulder_width": 0.45,
+         "speed": 0.0, "vx": 0.0, "vy": 0.0},
+        {"team": 0, "jersey": 8, "x": 30.0, "y": 5.0,
+         "head_angle": np.pi, "shoulder_angle": np.pi, "shoulder_width": 0.45,
+         "speed": 0.0, "vx": 0.0, "vy": 0.0},
+        {"team": 1, "jersey": 13, "x": 15.0, "y": 10.0,
+         "head_angle": 0.0, "shoulder_angle": 0.0, "shoulder_width": 0.45,
+         "speed": 0.0, "vx": 0.0, "vy": 0.0},
+        {"team": 0, "jersey": 9, "x": 25.0, "y": -8.0,
+         "head_angle": np.pi, "shoulder_angle": np.pi, "shoulder_width": 0.45,
+         "speed": 0.0, "vx": 0.0, "vy": 0.0},
+    ]
+    return pd.DataFrame(rows)
+
+
+def test_evaluate_takeon_returns_valid_with_velocity():
+    """Take-on with attacker moving — should produce a finite DOS."""
+    from src.dos import default_params
+    fo = _takeon_fixture_full()
+
+    class T:
+        x = 0.0; y = 0.0
+    r = v._evaluate_takeon(fo, T, attacking_team=1, attacking_right=True,
+                            params=default_params())
+    assert r is not None
+    assert r["direction_class"] in {"forward", "diagonal", "sideways"}
+    assert -1.0 <= r["dos"] <= 1.0
+    assert r["n_samples_used"] == 1
+    # Virtual destination should be ahead of (0, 0) since velocity is +x
+    assert r["takeon_dest_x"] > 0.0
+
+
+def test_evaluate_takeon_stationary_uses_goal_fallback():
+    """If attacker is stationary at the duel, fallback to goal direction
+    instead of returning None — the take-on still produces a valid DOS."""
+    from src.dos import default_params
+    fo = _takeon_fixture_full().copy()
+    # Force attacker stationary
+    fo.loc[fo["jersey"] == 11, ["vx", "vy", "speed"]] = 0.0
+
+    class T:
+        x = 0.0; y = 0.0
+    r = v._evaluate_takeon(fo, T, attacking_team=1, attacking_right=True,
+                            params=default_params())
+    assert r is not None
+    # Goal fallback: virtual destination toward +x at MIN_HORIZON_M
+    assert r["takeon_dest_x"] == pytest.approx(v.TAKEON_MIN_HORIZON_M)
+    assert r["takeon_dest_y"] == pytest.approx(0.0)
+
+
+def test_evaluate_takeon_no_attacker_returns_none():
+    """If no attacking-team player within 5m of the duel, skip the event."""
+    from src.dos import default_params
+    fo = _takeon_fixture_full().copy()
+    # Move ALL attackers far away
+    fo.loc[fo["team"] == 1, ["x", "y"]] = [(50.0, 30.0)] * (fo["team"] == 1).sum()
+
+    class T:
+        x = 0.0; y = 0.0
+    assert v._evaluate_takeon(fo, T, attacking_team=1, attacking_right=True,
+                               params=default_params()) is None
+
+
+def test_per_event_type_breakdown_includes_takeons():
+    """The per-event-type table should split passes / carries / takeons."""
+    df = pd.DataFrame({
+        "event_type": ["pass"] * 30 + ["carry"] * 20 + ["takeon"] * 10,
+        "dos": list(np.random.RandomState(0).normal(0.01, 0.01, 60)),
+        "evaluation": ["successfullyCompleted"] * 60,
+        "back_line_break": [False] * 60,
+        "parent_possession_xg": [0.0] * 50 + [0.1] * 10,
+        "awareness_mean": [0.4] * 60,
+        "direction_class": ["diagonal"] * 60,
+    })
+    out = v._per_event_type(df)
+    assert set(out.index) == {"pass", "carry", "takeon"}
+    assert out.loc["pass", "n"] == 30
+    assert out.loc["carry", "n"] == 20
+    assert out.loc["takeon", "n"] == 10
+
+
 def test_split_into_chunks_preserves_all_rows():
     ev = pd.DataFrame({"parquet_frame": np.arange(0, 50, 2)})
     chunks = v._split_into_chunks(ev, max_frame_span=20, max_events=5)
@@ -288,7 +381,7 @@ def test_home_gk_left_p1_loads():
 def test_build_event_records_returns_sorted_passes_and_carries():
     ev = v._build_event_records("Bayern_Hamburg", sample=None)
     assert len(ev) > 0
-    assert set(ev["event_type"].unique()) <= {"pass", "carry"}
+    assert set(ev["event_type"].unique()) <= {"pass", "carry", "takeon"}
     # Sorted by frame
     pf = ev["parquet_frame"].values
     assert np.all(pf[:-1] <= pf[1:])

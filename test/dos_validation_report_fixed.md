@@ -9,16 +9,16 @@ _Recomputed from `dos_validation_raw.csv` after fixing the DFL carry/possession 
 
 | Outcome | n+ | n− | mean (+) | mean (−) | median (+) | median (−) | rbc | p |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| led_to_chance (xg>0) — ALL events | 979 | 5753 | 0.0119 | 0.0107 | 0.0089 | 0.0075 | +0.055 | 2.76e-03 |
-| back_line_break — ALL events | 70 | 6662 | 0.0041 | 0.0109 | 0.0006 | 0.0077 | -0.389 | 1.00e+00 |
-| led_to_chance — passes only | 718 | 6014 | 0.0132 | 0.0106 | 0.0112 | 0.0073 | +0.126 | 1.51e-08 |
+| led_to_chance (xg>0) — ALL events | 979 | 5753 | 0.0131 | 0.0116 | 0.0111 | 0.0091 | +0.082 | 2.16e-05 |
+| back_line_break — ALL events | 70 | 6662 | 0.0041 | 0.0119 | 0.0006 | 0.0094 | -0.464 | 1.00e+00 |
+| led_to_chance — passes only | 718 | 6014 | 0.0132 | 0.0116 | 0.0112 | 0.0092 | +0.061 | 3.94e-03 |
 | passes only — led_to_chance | 718 | 4410 | 0.0132 | 0.0113 | 0.0112 | 0.0083 | +nan | 1.14e-04 |
-| carries only — led_to_chance | 261 | 1343 | 0.0085 | 0.0087 | 0.0046 | 0.0048 | +nan | 4.78e-01 |
+| carries only — led_to_chance | 261 | 1343 | 0.0129 | 0.0124 | 0.0111 | 0.0105 | +nan | 9.70e-02 |
 
 ## Correlation DOS ↔ parent xG (continuous)
 
-- Pearson  r = **+0.0180**, p = 1.39e-01
-- Spearman ρ = **+0.0348**, p = 4.34e-03
+- Pearson  r = **+0.0274**, p = 2.44e-02
+- Spearman ρ = **+0.0514**, p = 2.51e-05
 - N = 6728
 
 ## Quintiles (fixed)
@@ -26,11 +26,11 @@ _Recomputed from `dos_validation_raw.csv` after fixing the DFL carry/possession 
 ```
           n  dos_mean  success_rate  line_break_rate  chance_rate   xg_mean
 dos_q                                                                      
-Q1     1347 -0.001871      0.571641         0.024499     0.132146  0.012969
-Q2     1346  0.002290      0.653789         0.011887     0.138187  0.017285
-Q3     1346  0.007737      0.676820         0.007429     0.133730  0.011370
-Q4     1346  0.015353      0.711738         0.005201     0.161218  0.015661
-Q5     1347  0.030839      0.715664         0.002970     0.161841  0.017931
+Q1     1347 -0.001313      0.747587         0.031923     0.118040  0.011935
+Q2     1346  0.003653      0.667162         0.006686     0.134473  0.015046
+Q3     1346  0.009367      0.612927         0.005944     0.141902  0.011735
+Q4     1346  0.016271      0.623328         0.004458     0.167162  0.017615
+Q5     1347  0.030926      0.678545         0.002970     0.165553  0.018888
 ```
 
 ![quintiles](dos_validation_quintiles_fixed.png)
@@ -40,9 +40,9 @@ Q5     1347  0.030839      0.715664         0.002970     0.161841  0.017931
 ```
                     n  dos_mean  success_rate  line_break_rate  chance_rate  awareness_mean
 direction_class                                                                            
-forward          1144  0.010386      0.400350         0.031469     0.143357        0.389990
-diagonal         2165  0.010966      0.629561         0.015242     0.157968        0.410619
-sideways         3423  0.010973      0.777680         0.000292     0.138183        0.460589
+forward          1098  0.012100      0.417122         0.032787     0.137523        0.400057
+diagonal         2203  0.012112      0.618702         0.014980     0.158420        0.413783
+sideways         3431  0.011468      0.775867         0.000291     0.139609        0.460959
 ```
 
 ## Logistic regression (passes only, fixed xG for parent)

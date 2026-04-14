@@ -1,15 +1,17 @@
-"""Fix the carry → possession.sum_xg_ind link in `test/dos_validation_raw.csv`.
+"""Fix the carry / take-on → possession.sum_xg_ind link in
+`test/dos_validation_raw.csv`.
 
 Why this exists:
   The DFL kpi_data XML `TeamPossession > PossessionEvent` lists only the
-  pass and shot events inside each possession — carries and receptions are
-  never referenced. When `validate_dos_outcomes.py` built the xg map via
-  `event_id -> sum_xg_ind`, every carry silently got 0.0, which depressed
-  `chance_rate` in the carry subset and inflated the sample size of the
-  "no-chance" pool in Mann-Whitney tests.
+  pass and shot events inside each possession — carries, receptions and
+  take-ons (TacklingGame entries) are never referenced. When
+  `validate_dos_outcomes.py` built the xg map via `event_id -> sum_xg_ind`,
+  every carry/take-on silently got 0.0, which depressed `chance_rate` in
+  those subsets and inflated the size of the "no-chance" pool in
+  Mann-Whitney tests.
 
-Fix:
-  For every event whose id is NOT already in the xg map, look up its
+Fix (works for ANY event_type, takes only team_id + parquet_frame as input):
+  For every event whose current `parent_possession_xg` is 0, look up its
   parent possession by:
      (a) matching on team_id (both are DFL-CLU-*)
      (b) requiring the event's parquet_frame to fall inside the possession's
