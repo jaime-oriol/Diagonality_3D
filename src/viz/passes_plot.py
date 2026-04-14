@@ -48,12 +48,12 @@ PITCH_RATIO = 105.0 / 68.0   # ~1.544
 
 # Fractions of the figure height
 H_HEADER = 0.11
-H_PITCH = 0.62
-H_FOOTER = 0.21
+H_PITCH = 0.60
+H_FOOTER = 0.20
 # Vertical spacing
 PAD_TOP = 0.02
-PAD_HEADER_PITCH = 0.015
-PAD_PITCH_FOOTER = 0.015
+PAD_HEADER_PITCH = 0.012
+PAD_PITCH_FOOTER = 0.012
 PAD_BOTTOM = 0.025
 
 # Compute pitch horizontal span from the height ratio so it stays edge-
