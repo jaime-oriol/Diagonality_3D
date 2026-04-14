@@ -2,35 +2,35 @@
 
 _Recomputed from `dos_validation_raw.csv` after fixing the DFL carry/possession linkage via frame-range containment. No DOS values were recomputed; only `parent_possession_xg` was corrected for carry rows (the XML omits carries from `TeamPossession > PossessionEvent`, so the naive id join returned 0.0 for every carry)._
 
-- Events evaluated: **6,732** (passes=5128, carries=1604)
-- Events with `parent_possession_xg > 0` after fix: **979** (was 718 before; carries now properly linked).
+- Events evaluated: **6,923** (passes=5128, carries=1604)
+- Events with `parent_possession_xg > 0` after fix: **1,020** (was 718 before; carries now properly linked).
 
 ## Mann-Whitney U (fixed)
 
 | Outcome | n+ | n− | mean (+) | mean (−) | median (+) | median (−) | rbc | p |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| led_to_chance (xg>0) — ALL events | 979 | 5753 | 0.0131 | 0.0116 | 0.0111 | 0.0091 | +0.082 | 2.16e-05 |
-| back_line_break — ALL events | 70 | 6662 | 0.0041 | 0.0119 | 0.0006 | 0.0094 | -0.464 | 1.00e+00 |
-| led_to_chance — passes only | 718 | 6014 | 0.0132 | 0.0116 | 0.0112 | 0.0092 | +0.061 | 3.94e-03 |
+| led_to_chance (xg>0) — ALL events | 1020 | 5903 | 0.0130 | 0.0115 | 0.0110 | 0.0091 | +0.079 | 2.67e-05 |
+| back_line_break — ALL events | 70 | 6853 | 0.0041 | 0.0118 | 0.0006 | 0.0094 | -0.463 | 1.00e+00 |
+| led_to_chance — passes only | 718 | 6205 | 0.0132 | 0.0116 | 0.0112 | 0.0092 | +0.062 | 3.22e-03 |
 | passes only — led_to_chance | 718 | 4410 | 0.0132 | 0.0113 | 0.0112 | 0.0083 | +nan | 1.14e-04 |
 | carries only — led_to_chance | 261 | 1343 | 0.0129 | 0.0124 | 0.0111 | 0.0105 | +nan | 9.70e-02 |
 
 ## Correlation DOS ↔ parent xG (continuous)
 
-- Pearson  r = **+0.0274**, p = 2.44e-02
-- Spearman ρ = **+0.0514**, p = 2.51e-05
-- N = 6728
+- Pearson  r = **+0.0239**, p = 4.73e-02
+- Spearman ρ = **+0.0496**, p = 3.83e-05
+- N = 6890
 
 ## Quintiles (fixed)
 
 ```
           n  dos_mean  success_rate  line_break_rate  chance_rate   xg_mean
 dos_q                                                                      
-Q1     1347 -0.001313      0.747587         0.031923     0.118040  0.011935
-Q2     1346  0.003653      0.667162         0.006686     0.134473  0.015046
-Q3     1346  0.009367      0.612927         0.005944     0.141902  0.011735
-Q4     1346  0.016271      0.623328         0.004458     0.167162  0.017615
-Q5     1347  0.030926      0.678545         0.002970     0.165553  0.018888
+Q1     1385 -0.001281      0.753069         0.031769     0.119134  0.011983
+Q2     1384  0.003657      0.679191         0.005780     0.135116  0.015106
+Q3     1385  0.009332      0.623827         0.005776     0.147292  0.014358
+Q4     1384  0.016200      0.634393         0.004335     0.170520  0.018193
+Q5     1385  0.030802      0.685199         0.002888     0.164621  0.018589
 ```
 
 ![quintiles](dos_validation_quintiles_fixed.png)
@@ -40,9 +40,9 @@ Q5     1347  0.030926      0.678545         0.002970     0.165553  0.018888
 ```
                     n  dos_mean  success_rate  line_break_rate  chance_rate  awareness_mean
 direction_class                                                                            
-forward          1098  0.012100      0.417122         0.032787     0.137523        0.400057
-diagonal         2203  0.012112      0.618702         0.014980     0.158420        0.413783
-sideways         3431  0.011468      0.775867         0.000291     0.139609        0.460959
+forward          1137  0.012070      0.437115         0.031662     0.139842        0.404185
+diagonal         2272  0.012064      0.630282         0.014525     0.161532        0.416295
+sideways         3514  0.011429      0.781161         0.000285     0.140581        0.463324
 ```
 
 ## Logistic regression (passes only, fixed xG for parent)

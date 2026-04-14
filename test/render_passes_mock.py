@@ -77,7 +77,7 @@ fig = plot_player_passes(
     subtitle="Bayern Munich 5-0 Hamburger SV · Bundesliga 2025-26 · 13 Sep 2025",
     attacking_right=True,
     team_logo_path="figures/logos/bayern.png",
-    project_logo_path="figures/Logo-blanco.png",
+    project_logo_path="figures/Logo_vizs.png",
     save_path="test/passes_mock.png",
 )
 print("Saved: test/passes_mock.png")
