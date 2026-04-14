@@ -57,6 +57,16 @@ SHADOW_CMAP = LinearSegmentedColormap.from_list(
     "dos_shadow", ["#0d1117", "#5a3500", "#ffb300", "#ffea00", "#ffffff"]
 )
 
+# ── Direction-class palette (passes / carries / regates) ────────────────
+# Hand-picked from the project palette to maximize contrast on the dark BG
+# and keep the SV diagonality bias visually obvious: gold = diagonal.
+DIRECTION_COLORS = {
+    "diagonal": "#FFD700",   # Gold — the SV signature, our core narrative
+    "forward":  "#00BFFF",   # Deep Sky Blue — vertical / progressive
+    "sideways": "#FFFFFF",   # White — recycling / safety
+    "backward": "#9370DB",   # Medium Purple — construction / reset
+}
+
 # ── Pitch dimensions (TRACAB, meters, centered) ──────────────────────────
 
 PITCH_LENGTH = 105.0
