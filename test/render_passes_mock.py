@@ -73,8 +73,11 @@ print(passes["direction_class"].value_counts().to_dict())
 
 fig = plot_player_passes(
     passes,
-    title="Michael Olise — Passes",
-    subtitle="Bayern Munich 5-0 Hamburger SV · Bundesliga 2025-26 · 13 Sep 2025",
+    title="Michael Olise Passes",
+    subtitle=[
+        "Bundesliga 2025-26",
+        "Bayern Munich 5-0 Hamburger SV (13 September 2025)",
+    ],
     attacking_right=True,
     team_logo_path="figures/logos/bayern.png",
     project_logo_path="figures/Logo_vizs.png",

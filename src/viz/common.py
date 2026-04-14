@@ -61,10 +61,10 @@ SHADOW_CMAP = LinearSegmentedColormap.from_list(
 # Hand-picked from the project palette to maximize contrast on the dark BG
 # and keep the SV diagonality bias visually obvious: gold = diagonal.
 DIRECTION_COLORS = {
-    "diagonal": "#FFD700",   # Gold — the SV signature, our core narrative
-    "forward":  "#00BFFF",   # Deep Sky Blue — vertical / progressive
+    "diagonal": "#7CFC00",   # Lawn Green — vivid SV signature (Opta off-ball-run feel)
+    "forward":  "#00FFFF",   # Cyan — vertical / progressive
     "sideways": "#FFFFFF",   # White — recycling / safety
-    "backward": "#9370DB",   # Medium Purple — construction / reset
+    "backward": "#FF1493",   # Deep Pink — construction / reset
 }
 
 # ── Pitch dimensions (TRACAB, meters, centered) ──────────────────────────
