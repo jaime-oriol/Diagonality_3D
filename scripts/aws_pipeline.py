@@ -328,19 +328,28 @@ def build_pipeline() -> List[Step]:
         description="Build outputs/SUMMARY.md (master index)",
     ))
 
-    # ── STAGE 7: copy media into outputs/videos/ ──────────────────
-    # Done as final post-step so the SUMMARY links resolve.
+    # ── STAGE 7: copy media into outputs/ tree ─────────────────────
+    # Done as final post-step so the SUMMARY links resolve cleanly.
+    # mkdir -p ALL the destination dirs first (they may not exist if
+    # the corresponding render step failed/was skipped).
     steps.append(Step(
         name="collect_media",
         command=["bash", "-c",
-                 "mkdir -p outputs/videos outputs/frames && "
+                 "mkdir -p outputs/videos outputs/frames "
+                 "outputs/frames/pass_maps outputs/reports && "
                  "cp -n test/vision_kane_goal5.mp4 outputs/videos/kane_vision.mp4 2>/dev/null || true; "
                  "cp -n test/ppcf_kane_goal5.mp4 outputs/videos/kane_ppcf.mp4 2>/dev/null || true; "
                  "cp -n test/dos_kane_goal5.mp4 outputs/videos/kane_dos.mp4 2>/dev/null || true; "
                  "cp -n test/ppcf_kane_goal5.png outputs/frames/kane_ppcf.png 2>/dev/null || true; "
-                 "cp -n test/passes_olise_*.png outputs/frames/pass_maps/ 2>/dev/null || true; "
-                 "cp -n test/dos_validation_report*.md outputs/reports/ 2>/dev/null || true; "
-                 "cp -n test/dos_validation_*.png outputs/reports/ 2>/dev/null || true; "
+                 "for f in test/passes_olise_*.png; do "
+                 "  [ -f \"$f\" ] && cp -n \"$f\" outputs/frames/pass_maps/ 2>/dev/null || true; "
+                 "done; "
+                 "for f in test/dos_validation_report*.md; do "
+                 "  [ -f \"$f\" ] && cp -n \"$f\" outputs/reports/ 2>/dev/null || true; "
+                 "done; "
+                 "for f in test/dos_validation_*.png; do "
+                 "  [ -f \"$f\" ] && cp -n \"$f\" outputs/reports/ 2>/dev/null || true; "
+                 "done; "
                  "echo 'Collected media into outputs/'"],
         outputs=[],
         description="Copy renders + reports into outputs/ tree",

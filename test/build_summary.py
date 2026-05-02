@@ -296,10 +296,14 @@ def main():
         md.append(_md_table(matches, cols, max_rows=20))
 
     md.append(_section_header("Top events selected for video"))
+    md.append("Composite score = `DOS + 5·xT_delta + 0.05·back_line_break` "
+              "— picks events that combine mechanistic interest (DOS) with "
+              "real impact (xT-delta and direct back-line breaks). Pure DOS-"
+              "only ranking is in `outputs/tables/top_events_full_vector.csv`.\n")
     md.append(f"_(see `outputs/tables/top_dos_events.json` for full metadata, "
               f"{len(top_dos_ev)} entries)_\n")
     if top_dos_ev:
-        md.append("| # | match | player | type | frame | DOS | xT | back-line break |")
+        md.append("| # | match | player | type | frame | DOS | xT-delta | back-line break |")
         md.append("|---:|---|---|---|---:|---:|---:|---|")
         for i, ev in enumerate(top_dos_ev[:15]):
             md.append(

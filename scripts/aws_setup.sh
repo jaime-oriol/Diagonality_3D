@@ -24,12 +24,27 @@ log() { echo -e "\033[1;32m[setup]\033[0m $*"; }
 
 log "1/5 — system packages"
 sudo dnf -y update >/dev/null
+# Note: ffmpeg is NOT in the Amazon Linux 2023 default repos. We grab a
+# static build from BtbN/FFmpeg-Builds (used by ML workflows everywhere)
+# and drop it in /usr/local/bin so matplotlib's animation backend finds it.
 sudo dnf -y install \
-    ffmpeg \
     git \
     gcc gcc-c++ make \
-    bzip2 wget curl tar \
+    bzip2 wget curl tar xz \
     >/dev/null
+
+if ! command -v ffmpeg >/dev/null 2>&1; then
+    log "  installing static ffmpeg from BtbN/FFmpeg-Builds"
+    cd /tmp
+    FFMPEG_URL="https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-linux64-gpl.tar.xz"
+    wget -q -O ffmpeg.tar.xz "$FFMPEG_URL"
+    tar -xf ffmpeg.tar.xz
+    sudo cp ffmpeg-master-latest-linux64-gpl/bin/ffmpeg /usr/local/bin/
+    sudo cp ffmpeg-master-latest-linux64-gpl/bin/ffprobe /usr/local/bin/
+    sudo chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
+    rm -rf ffmpeg.tar.xz ffmpeg-master-latest-linux64-gpl
+fi
+ffmpeg -version | head -1
 
 log "2/5 — miniconda"
 if [[ ! -d "$MINICONDA" ]]; then
