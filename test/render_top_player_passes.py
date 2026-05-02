@@ -1,0 +1,207 @@
+"""Render per-player pass maps for the storytelling deck.
+
+For every (player, match) combination with at least `MIN_PASSES_PER_MATCH`
+passes, render the project-style pass map (`src/viz/passes_plot.py`)
+containing direction-class colored arrows + Opta-style stats footer.
+
+Player selection: top `TOP_N_PLAYERS` of the `players_by_dos` ranking,
+filtered to attacking positions (any non-GK / non-CB) so we focus on
+players whose diagonality is the storytelling angle.
+
+Output naming:
+  outputs/frames/pass_maps/{PlayerName}_{Match}.png
+
+Resume: skips files that already exist on disk.
+"""
+
+import sys
+sys.path.insert(0, ".")
+
+import time
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from src.loader import (
+    MATCHES, load_match_info, compute_attacking_right,
+)
+from src.preprocess import load_cached_events, load_cached_metadata
+from src.viz.passes_plot import plot_player_passes
+
+
+RAW = Path("test/dos_validation_full.csv")
+RANK = Path("outputs/tables/players_by_dos.csv")
+OUT_DIR = Path("outputs/frames/pass_maps")
+
+TOP_N_PLAYERS = 8
+MIN_PASSES_PER_MATCH = 12          # don't render maps with too few passes
+MAX_MATCHES_PER_PLAYER = 3          # cap renders per player
+
+# Positions we EXCLUDE — pass maps for GKs / IVR aren't the story.
+EXCLUDE_POSITIONS = {"TW"}
+
+
+def _classify_dfl(angle_deg: float) -> str:
+    """DFL official PlayAngle bucketing (catalogue p.28)."""
+    if pd.isna(angle_deg):
+        return "unknown"
+    a = abs(float(angle_deg))
+    if a <= 22.5:    return "forward"
+    if a <= 67.5:    return "diagonal"
+    if a <= 112.5:   return "sideways"
+    return "backward"
+
+
+def _team_logo_path(team_name: str) -> str:
+    """Map a team name to its logo PNG (if present)."""
+    name = team_name.lower().split()[0] if team_name else ""
+    candidates = [
+        f"figures/logos/{name}.png",
+        f"figures/logos/{name.replace('.', '')}.png",
+    ]
+    for p in candidates:
+        if Path(p).exists():
+            return p
+    return ""  # plot_player_passes handles empty paths gracefully
+
+
+def _build_player_passes(match: str, player_id: str) -> pd.DataFrame:
+    """Reproduce the same coordinate normalisation as render_olise_passes:
+    flip x and y in halves where the player attacked LEFT so the rendered
+    map always reads as if the player attacked RIGHT."""
+    info = load_match_info(match)
+    home_team_id = info.get("home_team_id", "")
+    home_gk_left_p1 = bool(load_cached_metadata(match)["home_gk_left"][1])
+
+    events = load_cached_events(match)
+    p = events[(events["event_type"] == "pass")
+               & (events["player_id"] == player_id)].copy()
+    p = p.dropna(subset=["x", "y", "x_receiver", "y_receiver"])
+    if len(p) == 0:
+        return p
+
+    # Determine the player's team_int from any of his event rows.
+    team_int = 1 if str(p.iloc[0]["team_id"]) == home_team_id else 0
+
+    flips = []
+    for _, row in p.iterrows():
+        ar = compute_attacking_right(team_int, int(row["half"]), home_gk_left_p1)
+        flips.append(not ar)
+    flip_mask = np.asarray(flips)
+    for col in ("x", "y", "x_receiver", "y_receiver"):
+        p.loc[flip_mask, col] = -p.loc[flip_mask, col]
+
+    p["direction_class"] = p["play_angle"].apply(_classify_dfl)
+    p["successful"] = p["evaluation"].isin({"successfullyCompleted", "successful"})
+    return p[["x", "y", "x_receiver", "y_receiver",
+              "direction_class", "successful", "play_angle", "evaluation"]]
+
+
+def _select_targets(df: pd.DataFrame, ranking: pd.DataFrame) -> list:
+    """For each top player, pick up to MAX_MATCHES_PER_PLAYER of their
+    matches with the highest event count. Returns list of dicts."""
+    selected = []
+    if len(ranking) == 0:
+        return selected
+    top = ranking[~ranking["player_position"].isin(EXCLUDE_POSITIONS)].head(TOP_N_PLAYERS)
+
+    for _, prow in top.iterrows():
+        pid = prow["player_id"]
+        pname = prow["player_name"]
+        sub = df[df["player_id"] == pid]
+        if len(sub) == 0:
+            continue
+        # Per-match pass count
+        per_match = (sub[sub["event_type"] == "pass"]
+                     .groupby("match").size()
+                     .reset_index(name="n_passes")
+                     .sort_values("n_passes", ascending=False))
+        per_match = per_match[per_match["n_passes"] >= MIN_PASSES_PER_MATCH]
+        per_match = per_match.head(MAX_MATCHES_PER_PLAYER)
+        for _, mrow in per_match.iterrows():
+            selected.append({
+                "player_id": str(pid),
+                "player_name": str(pname),
+                "team_name": str(prow["team_name"]),
+                "match": str(mrow["match"]),
+                "n_passes": int(mrow["n_passes"]),
+            })
+    return selected
+
+
+def _match_subtitle(match: str, info: dict) -> list:
+    """Pretty subtitle e.g. ['Bundesliga 2025-26',
+    'Bayern Munich 5-0 Hamburger SV (13 September 2025)']."""
+    title = info.get("match_title", "")
+    return [
+        "Bundesliga 2025-26",
+        title if title else match.replace("_", " vs "),
+    ]
+
+
+def main():
+    if not RAW.exists():
+        raise SystemExit(f"Missing {RAW}. Run enrich_full_metadata.py first.")
+    if not RANK.exists():
+        raise SystemExit(f"Missing {RANK}. Run aggregate_rankings.py first.")
+
+    df = pd.read_csv(RAW)
+    ranking = pd.read_csv(RANK)
+    print(f"Loaded full data: {len(df):,} rows, ranking: {len(ranking)} players")
+
+    targets = _select_targets(df, ranking)
+    print(f"Targets selected: {len(targets)}")
+    for t in targets:
+        print(f"  {t['player_name']:25s} {t['team_name']:18s} "
+              f"{t['match']:25s} ({t['n_passes']} passes)")
+
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    n_done = 0; n_skip = 0; n_fail = 0
+    t_total = time.time()
+
+    for tg in targets:
+        pname_safe = tg["player_name"].replace(" ", "_").replace("/", "")
+        out = OUT_DIR / f"{pname_safe}_{tg['match']}.png"
+        if out.exists() and out.stat().st_size > 30_000:
+            print(f"  SKIP {out.name}")
+            n_skip += 1
+            continue
+
+        try:
+            passes = _build_player_passes(tg["match"], tg["player_id"])
+        except Exception as e:
+            print(f"  [ERROR build] {tg['player_name']} @ {tg['match']}: {e}")
+            n_fail += 1
+            continue
+
+        if len(passes) < MIN_PASSES_PER_MATCH:
+            print(f"  [SKIP] {tg['player_name']} @ {tg['match']}: {len(passes)} passes")
+            n_fail += 1
+            continue
+
+        info = load_match_info(tg["match"])
+        try:
+            plot_player_passes(
+                passes,
+                title=f"{tg['player_name']} Passes",
+                subtitle=_match_subtitle(tg["match"], info),
+                attacking_right=True,
+                team_logo_path=_team_logo_path(tg["team_name"]) or None,
+                project_logo_path="figures/Logo.png" if Path("figures/Logo.png").exists() else None,
+                save_path=str(out),
+            )
+        except Exception as e:
+            print(f"  [ERROR plot] {out.name}: {e}")
+            n_fail += 1
+            continue
+
+        n_done += 1
+        print(f"  + {out.name}  ({len(passes)} passes)")
+
+    print(f"\nDONE: {n_done} new, {n_skip} skipped, {n_fail} failed "
+          f"({(time.time()-t_total)/60:.1f} min)")
+
+
+if __name__ == "__main__":
+    main()
