@@ -295,28 +295,12 @@ def main():
     df["outcome_pos"] = pos
 
     # ── Mann-Whitney U ────
-    mw_results = []
-    for label, mask in [
-        ("ALL events",       df["outcome_pos"]),
-        ("passes only",      df.loc[df["event_type"] == "pass", "outcome_pos"]
-                                .reindex(df.index, fill_value=False)),
-        ("carries only",     df.loc[df["event_type"] == "carry", "outcome_pos"]
-                                .reindex(df.index, fill_value=False)),
-        ("takeons only",     df.loc[df["event_type"] == "takeon", "outcome_pos"]
-                                .reindex(df.index, fill_value=False)),
-    ]:
-        # For per-event-type subsets, restrict the dataframe to only that type
-        if "passes only" in label:
-            sub = df[df["event_type"] == "pass"]
-            mw_results.append(_mwu(sub, sub["outcome_pos"], label))
-        elif "carries only" in label:
-            sub = df[df["event_type"] == "carry"]
-            mw_results.append(_mwu(sub, sub["outcome_pos"], label))
-        elif "takeons only" in label:
-            sub = df[df["event_type"] == "takeon"]
-            mw_results.append(_mwu(sub, sub["outcome_pos"], label))
-        else:
-            mw_results.append(_mwu(df, mask, label))
+    mw_results = [_mwu(df, df["outcome_pos"], "ALL events")]
+    for et, label in [("pass", "passes only"),
+                      ("carry", "carries only"),
+                      ("takeon", "takeons only")]:
+        sub = df[df["event_type"] == et]
+        mw_results.append(_mwu(sub, sub["outcome_pos"], label))
 
     # ── Spearman / Pearson on continuous DOS ↔ outcome ────
     sp_results = []

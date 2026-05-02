@@ -471,7 +471,7 @@ def safe_int(val) -> int:
         return -1
 
 
-# --- Shared game logic (used by theta.py, ddef.py) -----------------------
+# --- Shared game logic (used by theta.py, ddef.py, dos.py) ---------------
 
 def infer_attacking_team(
     event_x: float,

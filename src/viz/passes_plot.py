@@ -41,15 +41,14 @@ import matplotlib.font_manager as _fm
 # Try to use Inter (Opta-like aesthetic). Fall back to DejaVu Sans
 # (always present) if Inter is not installed in the system fonts.
 def _resolve_font():
+    """Try to register Inter from any of the standard user-font locations.
+    Falls back to DejaVu Sans (always present) if Inter is not installed."""
     try:
-        for ttf in [
-            "/home/jaime/.local/share/fonts/Inter-Regular.ttf",
-            "/home/jaime/.local/share/fonts/Inter-Bold.ttf",
-            "/home/jaime/.local/share/fonts/Inter-Medium.ttf",
-            "/home/jaime/.local/share/fonts/Inter-SemiBold.ttf",
-        ]:
-            try: _fm.fontManager.addfont(ttf)
-            except Exception: pass
+        font_dir = Path.home() / ".local" / "share" / "fonts"
+        if font_dir.exists():
+            for ttf in font_dir.glob("Inter-*.ttf"):
+                try: _fm.fontManager.addfont(str(ttf))
+                except Exception: pass
         names = {f.name for f in _fm.fontManager.ttflist}
         if "Inter" in names:
             return "Inter"

@@ -118,7 +118,7 @@ def _recompute_stats(df: pd.DataFrame) -> str:
 
     df = df.copy()
     df["chance"] = df["parent_possession_xg"] > 0
-    df["success"] = df["evaluation"] == "successfullyCompleted"
+    df["success"] = df["evaluation"].isin({"successfullyCompleted", "successful"})
 
     def mw(mask: pd.Series, label: str):
         a = df.loc[mask, "dos"].dropna().values
@@ -179,7 +179,7 @@ def _recompute_stats(df: pd.DataFrame) -> str:
     q = df.groupby("dos_q", observed=True).agg(
         n=("dos", "size"),
         dos_mean=("dos", "mean"),
-        success_rate=("evaluation", lambda s: float((s == "successfullyCompleted").mean())),
+        success_rate=("evaluation", lambda s: float(s.isin({"successfullyCompleted", "successful"}).mean())),
         line_break_rate=("back_line_break", "mean"),
         chance_rate=("parent_possession_xg", lambda s: float((s > 0).mean())),
         xg_mean=("parent_possession_xg", "mean"),
@@ -208,7 +208,7 @@ def _recompute_stats(df: pd.DataFrame) -> str:
     dc = df.groupby("direction_class").agg(
         n=("dos", "size"),
         dos_mean=("dos", "mean"),
-        success_rate=("evaluation", lambda s: float((s == "successfullyCompleted").mean())),
+        success_rate=("evaluation", lambda s: float(s.isin({"successfullyCompleted", "successful"}).mean())),
         line_break_rate=("back_line_break", "mean"),
         chance_rate=("parent_possession_xg", lambda s: float((s > 0).mean())),
         awareness_mean=("awareness_mean", "mean"),
@@ -248,7 +248,7 @@ def _recompute_stats(df: pd.DataFrame) -> str:
                  f"carries={int((df['event_type']=='carry').sum())})")
     lines.append(f"- Events with `parent_possession_xg > 0` after fix: "
                  f"**{int((df['parent_possession_xg']>0).sum()):,}** "
-                 f"(was {718} before; carries now properly linked).")
+                 f"(carries now properly linked via frame-range containment).")
     lines.append("")
 
     lines.append("## Mann-Whitney U (fixed)")
