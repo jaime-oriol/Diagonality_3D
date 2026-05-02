@@ -205,8 +205,13 @@ def _draw_header(
     if project_logo_path is not None and Path(project_logo_path).exists():
         try:
             img = plt.imread(project_logo_path)
+            # Auto-zoom so the rendered logo has the same visual height
+            # regardless of the source PNG resolution. Target ≈ 48 px tall
+            # (the size that matched the previous Logo_vizs.png at zoom=0.08).
+            TARGET_HEIGHT_PX = 48
+            zoom = TARGET_HEIGHT_PX / float(img.shape[0])
             ab = AnnotationBbox(
-                OffsetImage(img, zoom=0.08),     # ↑ → logo MÁS GRANDE
+                OffsetImage(img, zoom=zoom),
                 (1.0, 0.42), frameon=False,      # X ↑ → logo a la DERECHA (mantén dentro de [0,1]) / Y ↓ → MÁS ABAJO
                 box_alignment=(1.0, 0.5),         # ancla RIGHT-EDGE del logo en X
             )

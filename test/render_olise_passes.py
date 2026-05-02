@@ -86,7 +86,7 @@ def main():
         subtitle=SUBTITLE,
         attacking_right=True,
         team_logo_path="figures/logos/bayern.png",
-        project_logo_path="figures/Logo_vizs.png",
+        project_logo_path="figures/Logo.png",
         save_path=out,
     )
     print(f"Saved: {out}")
