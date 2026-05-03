@@ -15,7 +15,10 @@ import sys
 sys.path.insert(0, ".")
 
 import json
+import os
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from multiprocessing import get_context
 from pathlib import Path
 
 import numpy as np
@@ -141,38 +144,51 @@ def _video_filename(i: int, event: dict) -> str:
     return f"top{i+1:02d}_vision_{event['match']}_{pname}_{et}_{f}.mp4"
 
 
+def _render_task(event_dict: dict, out_path_str: str) -> tuple:
+    """Top-level wrapper picklable by ProcessPoolExecutor."""
+    out = Path(out_path_str)
+    if out.exists() and out.stat().st_size > 100_000:
+        return ("skip", f"{out.name} ({out.stat().st_size/1024/1024:.1f} MB)")
+    t0 = time.time()
+    try:
+        ok = _render_one(event_dict, out)
+    except Exception as e:
+        return ("fail", f"{out.name}: {e}")
+    if ok:
+        return ("done", f"{out.name} ({time.time()-t0:.0f}s)")
+    return ("fail", f"{out.name}: render returned False")
+
+
 def main():
     if not EVENT_LIST.exists():
         raise SystemExit(f"Missing {EVENT_LIST}. Run select_top_events.py first.")
     events = json.loads(EVENT_LIST.read_text())[:TOP_N]
-    print(f"Loaded {EVENT_LIST}: rendering top {len(events)} as VISION videos")
+
+    default_n = min(os.cpu_count() or 4, len(events))
+    n_workers = int(os.environ.get("RENDER_WORKERS", str(default_n)))
+    n_workers = max(1, min(n_workers, len(events)))
+    print(f"Loaded {EVENT_LIST}: rendering top {len(events)} as VISION "
+          f"videos, parallelism={n_workers}")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    tasks = [(ev, str(OUT_DIR / _video_filename(i, ev))) for i, ev in enumerate(events)]
+
     n_skip = n_done = n_fail = 0
     t_total = time.time()
-
-    for i, ev in enumerate(events):
-        out = OUT_DIR / _video_filename(i, ev)
-        print(f"\n[{i+1}/{len(events)}] {out.name}")
-        if out.exists() and out.stat().st_size > 100_000:
-            print(f"  SKIP ({out.stat().st_size/1024/1024:.1f} MB)")
-            n_skip += 1
-            continue
-        t0 = time.time()
-        try:
-            ok = _render_one(ev, out)
-        except Exception as e:
-            print(f"  [ERROR] {e}")
-            n_fail += 1
-            continue
-        if ok:
-            n_done += 1
-            print(f"  Saved ({time.time()-t0:.0f}s)")
-        else:
-            n_fail += 1
+    ctx = get_context("spawn")
+    with ProcessPoolExecutor(max_workers=n_workers, mp_context=ctx) as ex:
+        futures = {ex.submit(_render_task, ev, op): op for ev, op in tasks}
+        for fut in as_completed(futures):
+            status, msg = fut.result()
+            if status == "done":
+                n_done += 1; print(f"  + {msg}")
+            elif status == "skip":
+                n_skip += 1; print(f"  ⤳ SKIP {msg}")
+            else:
+                n_fail += 1; print(f"  [FAIL] {msg}")
 
     print(f"\nDONE: {n_done} new, {n_skip} skipped, {n_fail} failed "
-          f"({(time.time()-t_total)/60:.1f} min total)")
+          f"({(time.time()-t_total)/60:.1f} min wall, {n_workers} workers)")
 
 
 if __name__ == "__main__":
