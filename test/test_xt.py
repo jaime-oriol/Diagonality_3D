@@ -145,7 +145,7 @@ def test_xt_delta_progressive_pass_positive():
         x_dest=40.0, y_dest=10.0,
         attacking_right=True, success=True,
     )
-    assert float(d) > 0.05
+    assert d.item() > 0.05
 
 
 def test_xt_delta_backward_pass_negative():
@@ -154,14 +154,14 @@ def test_xt_delta_backward_pass_negative():
         x_dest=-10.0, y_dest=0.0,
         attacking_right=True, success=True,
     )
-    assert float(d) < -0.05
+    assert d.item() < -0.05
 
 
 def test_xt_delta_unsuccessful_returns_minus_origin_xt():
     # Failed pass: xt_delta = -xT(origin), regardless of dest
-    origin_xt = float(xt_at_tracab(40.0, 10.0, True))
+    origin_xt = xt_at_tracab(40.0, 10.0, True).item()
     d = xt_delta(40.0, 10.0, 50.0, 0.0, True, success=False)
-    np.testing.assert_allclose(float(d), -origin_xt, rtol=1e-6)
+    np.testing.assert_allclose(d.item(), -origin_xt, rtol=1e-6)
 
 
 def test_xt_delta_default_success():
@@ -190,7 +190,7 @@ def test_xt_delta_mixed_success_vector():
 
 def test_xt_delta_nan_inputs_give_nan():
     d = xt_delta(np.nan, 0.0, 30.0, 0.0, True, success=True)
-    assert np.isnan(float(d))
+    assert np.isnan(d.item())
 
 
 # ── Symmetry: attacking right vs left should give same Δ for same physical motion ──
