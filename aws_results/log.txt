@@ -1,0 +1,1051 @@
+
+
+=== pipeline run @ 2026-05-03T07:23:10 ===
+
+========================================================================
+[cache_Bayern_Hamburg] Preprocess + cache match Bayern_Hamburg
+  $ python3 -m src.preprocess Bayern_Hamburg
+========================================================================
+[Bayern_Hamburg] Loading metadata...
+[Bayern_Hamburg] Loading events...
+  pass: 1138
+  carry: 338
+  reception: 1142
+  shot: 31
+  Total: 2649 (0.2s)
+[Bayern_Hamburg] Loading possessions...
+  221 possessions, total xG_ind=3.13
+[Bayern_Hamburg] Frames to extract: 195,418 unique
+  Range: 3330768 - 3677280
+[Bayern_Hamburg] Extracting skeleton — all 21 keypoints (streaming to disk)...
+    row_group 40/280, 8,814,897 rows so far
+    row_group 60/280, 18,868,416 rows so far
+    row_group 80/280, 23,723,469 rows so far
+    row_group 100/280, 33,079,536 rows so far
+    row_group 160/280, 45,087,861 rows so far
+    row_group 180/280, 56,541,114 rows so far
+    row_group 220/280, 73,059,084 rows so far
+    row_group 240/280, 83,440,938 rows so far
+    all frames found at row_group 254/280
+  90,094,536 rows written, 925.7 MB on disk (1003s)
+[Bayern_Hamburg] Extracting ball...
+  195,418 rows (12s)
+
+[Bayern_Hamburg] Validating cache...
+  Sample frame 3330768: 22 players, 21 parts/player
+  Skeleton rows on disk: 90,094,536
+
+[Bayern_Hamburg] DONE in 1016s
+  Cache: /home/ec2-user/Diagonality_3D/cache/Bayern_Hamburg
+    skeleton.parquet           925.7 MB
+    ball.parquet                 7.8 MB
+    events.parquet               0.2 MB
+    possessions.parquet          0.0 MB
+    TOTAL                      933.7 MB
+[cache_Bayern_Hamburg] OK in 1016.4s
+
+========================================================================
+[cache_Dortmund_Stuttgart] Preprocess + cache match Dortmund_Stuttgart
+  $ python3 -m src.preprocess Dortmund_Stuttgart
+========================================================================
+[Dortmund_Stuttgart] Loading metadata...
+[Dortmund_Stuttgart] Loading events...
+  pass: 963
+  carry: 307
+  reception: 958
+  shot: 29
+  Total: 2257 (0.2s)
+[Dortmund_Stuttgart] Loading possessions...
+  275 possessions, total xG_ind=4.56
+[Dortmund_Stuttgart] Frames to extract: 178,007 unique
+  Range: 2789963 - 3140937
+[Dortmund_Stuttgart] Extracting skeleton — all 21 keypoints (streaming to disk)...
+    row_group 40/267, 7,910,910 rows so far
+    row_group 60/267, 17,875,788 rows so far
+    row_group 80/267, 27,145,356 rows so far
+    row_group 100/267, 33,161,058 rows so far
+    row_group 120/267, 43,070,412 rows so far
+    row_group 160/267, 46,752,720 rows so far
+    row_group 180/267, 54,605,334 rows so far
+    row_group 220/267, 70,330,386 rows so far
+    row_group 240/267, 77,849,436 rows so far
+    all frames found at row_group 257/267
+  82,181,736 rows written, 857.3 MB on disk (1011s)
+[Dortmund_Stuttgart] Extracting ball...
+  178,007 rows (12s)
+
+[Dortmund_Stuttgart] Validating cache...
+  Sample frame 2789963: 21 players, 21 parts/player
+  Skeleton rows on disk: 82,181,736
+
+[Dortmund_Stuttgart] DONE in 1024s
+  Cache: /home/ec2-user/Diagonality_3D/cache/Dortmund_Stuttgart
+    skeleton.parquet           857.3 MB
+    ball.parquet                 7.1 MB
+    events.parquet               0.2 MB
+    possessions.parquet          0.0 MB
+    TOTAL                      864.5 MB
+[cache_Dortmund_Stuttgart] OK in 1024.5s
+
+========================================================================
+[cache_Frankfurt_Bayern] Preprocess + cache match Frankfurt_Bayern
+  $ python3 -m src.preprocess Frankfurt_Bayern
+========================================================================
+[Frankfurt_Bayern] Loading metadata...
+[Frankfurt_Bayern] Loading events...
+  pass: 1220
+  carry: 320
+  reception: 1207
+  shot: 16
+  Total: 2763 (0.3s)
+[Frankfurt_Bayern] Loading possessions...
+  252 possessions, total xG_ind=2.15
+[Frankfurt_Bayern] Frames to extract: 198,648 unique
+  Range: 3331866 - 3674304
+[Frankfurt_Bayern] Extracting skeleton — all 21 keypoints (streaming to disk)...
+    row_group 40/256, 8,488,200 rows so far
+    row_group 60/256, 14,934,486 rows so far
+    row_group 80/256, 26,628,630 rows so far
+    row_group 100/256, 37,675,974 rows so far
+    row_group 120/256, 48,000,750 rows so far
+    row_group 160/256, 51,333,009 rows so far
+    row_group 180/256, 60,432,561 rows so far
+    row_group 200/256, 70,104,174 rows so far
+    row_group 220/256, 78,695,988 rows so far
+    row_group 240/256, 85,777,356 rows so far
+    all frames found at row_group 252/256
+  91,659,540 rows written, 945.8 MB on disk (1010s)
+[Frankfurt_Bayern] Extracting ball...
+  198,648 rows (12s)
+
+[Frankfurt_Bayern] Validating cache...
+  Sample frame 3331866: 22 players, 21 parts/player
+  Skeleton rows on disk: 91,659,540
+
+[Frankfurt_Bayern] DONE in 1022s
+  Cache: /home/ec2-user/Diagonality_3D/cache/Frankfurt_Bayern
+    skeleton.parquet           945.8 MB
+    ball.parquet                 7.9 MB
+    events.parquet               0.2 MB
+    possessions.parquet          0.0 MB
+    TOTAL                      953.9 MB
+[cache_Frankfurt_Bayern] OK in 1022.6s
+
+========================================================================
+[cache_Frankfurt_Union] Preprocess + cache match Frankfurt_Union
+  $ python3 -m src.preprocess Frankfurt_Union
+========================================================================
+[Frankfurt_Union] Loading metadata...
+[Frankfurt_Union] Loading events...
+  pass: 938
+  carry: 313
+  reception: 918
+  shot: 30
+  Total: 2199 (0.2s)
+[Frankfurt_Union] Loading possessions...
+  299 possessions, total xG_ind=3.68
+[Frankfurt_Union] Frames to extract: 182,991 unique
+  Range: 2790007 - 3154652
+[Frankfurt_Union] Extracting skeleton — all 21 keypoints (streaming to disk)...
+    row_group 40/276, 5,942,349 rows so far
+    row_group 60/276, 14,857,563 rows so far
+    row_group 80/276, 24,891,930 rows so far
+    row_group 100/276, 31,361,316 rows so far
+    row_group 120/276, 41,999,328 rows so far
+    row_group 160/276, 46,324,236 rows so far
+    row_group 180/276, 52,446,765 rows so far
+    row_group 200/276, 61,819,086 rows so far
+    row_group 220/276, 69,344,352 rows so far
+    row_group 240/276, 74,464,236 rows so far
+    row_group 260/276, 81,155,403 rows so far
+    all frames found at row_group 266/276
+  84,392,910 rows written, 875.1 MB on disk (1074s)
+[Frankfurt_Union] Extracting ball...
+  182,991 rows (12s)
+
+[Frankfurt_Union] Validating cache...
+  Sample frame 2790007: 22 players, 21 parts/player
+  Skeleton rows on disk: 84,392,910
+
+[Frankfurt_Union] DONE in 1087s
+  Cache: /home/ec2-user/Diagonality_3D/cache/Frankfurt_Union
+    skeleton.parquet           875.1 MB
+    ball.parquet                 7.3 MB
+    events.parquet               0.2 MB
+    possessions.parquet          0.0 MB
+    TOTAL                      882.6 MB
+[cache_Frankfurt_Union] OK in 1087.0s
+
+========================================================================
+[cache_Union_Bayern] Preprocess + cache match Union_Bayern
+  $ python3 -m src.preprocess Union_Bayern
+========================================================================
+[Union_Bayern] Loading metadata...
+[Union_Bayern] Loading events...
+  pass: 1036
+  carry: 328
+  reception: 1049
+  shot: 23
+  Total: 2436 (0.2s)
+[Union_Bayern] Loading possessions...
+  258 possessions, total xG_ind=2.19
+[Union_Bayern] Frames to extract: 189,060 unique
+  Range: 2790413 - 3141131
+[Union_Bayern] Extracting skeleton — all 21 keypoints (streaming to disk)...
+    row_group 40/262, 7,919,016 rows so far
+    row_group 60/262, 14,679,000 rows so far
+    row_group 80/262, 22,905,288 rows so far
+    row_group 100/262, 31,717,350 rows so far
+    row_group 120/262, 38,283,882 rows so far
+    row_group 180/262, 49,738,584 rows so far
+    row_group 200/262, 59,881,332 rows so far
+    row_group 220/262, 70,251,972 rows so far
+    row_group 240/262, 78,876,441 rows so far
+    all frames found at row_group 257/262
+  87,235,071 rows written, 899.7 MB on disk (1016s)
+[Union_Bayern] Extracting ball...
+  189,060 rows (12s)
+
+[Union_Bayern] Validating cache...
+  Sample frame 2790413: 19 players, 21 parts/player
+  Skeleton rows on disk: 87,235,071
+
+[Union_Bayern] DONE in 1029s
+  Cache: /home/ec2-user/Diagonality_3D/cache/Union_Bayern
+    skeleton.parquet           899.7 MB
+    ball.parquet                 7.4 MB
+    events.parquet               0.2 MB
+    possessions.parquet          0.0 MB
+    TOTAL                      907.4 MB
+[cache_Union_Bayern] OK in 1029.0s
+
+========================================================================
+[validate_dos] Compute DOS for every event across 5 matches (chunked, ~25 min)
+  $ python3 test/validate_dos_outcomes.py
+========================================================================
+
+[Bayern_Hamburg] loading event index...
+  1,486 events queued
+  11 chunk(s)  (max_frame_span=30000, max_events=250)
+  chunk 1/11  frames 3330918-3357278 (span=26360)  events=171  rows_kept=171  elapsed=29s
+  chunk 2/11  frames 3361050-3391032 (span=29982)  events=188  rows_kept=188  elapsed=61s
+  chunk 3/11  frames 3391084-3419456 (span=28372)  events=56  rows_kept=55  elapsed=71s
+  chunk 4/11  frames 3421930-3451906 (span=29976)  events=161  rows_kept=160  elapsed=100s
+  chunk 5/11  frames 3451938-3481902 (span=29964)  events=158  rows_kept=156  elapsed=128s
+  chunk 6/11  frames 3482038-3482622 (span=584)  events=5  rows_kept=5  elapsed=129s
+  chunk 7/11  frames 3536386-3566286 (span=29900)  events=194  rows_kept=192  elapsed=164s
+  chunk 8/11  frames 3566398-3592130 (span=25732)  events=142  rows_kept=142  elapsed=190s
+  chunk 9/11  frames 3597918-3622466 (span=24548)  events=133  rows_kept=133  elapsed=212s
+  chunk 10/11  frames 3629068-3658632 (span=29564)  events=184  rows_kept=184  elapsed=244s
+  chunk 11/11  frames 3662428-3677116 (span=14688)  events=94  rows_kept=94  elapsed=259s
+  1,480 rows total (259s)
+
+[Dortmund_Stuttgart] loading event index...
+  1,285 events queued
+  11 chunk(s)  (max_frame_span=30000, max_events=250)
+  chunk 1/11  frames 2790113-2820083 (span=29970)  events=157  rows_kept=156  elapsed=27s
+  chunk 2/11  frames 2820333-2850159 (span=29826)  events=158  rows_kept=158  elapsed=56s
+  chunk 3/11  frames 2850361-2880331 (span=29970)  events=136  rows_kept=136  elapsed=81s
+  chunk 4/11  frames 2880451-2910415 (span=29964)  events=89  rows_kept=89  elapsed=96s
+  chunk 5/11  frames 2910691-2934413 (span=23722)  events=126  rows_kept=126  elapsed=119s
+  chunk 6/11  frames 2984239-3007407 (span=23168)  events=130  rows_kept=129  elapsed=142s
+  chunk 7/11  frames 3016479-3045753 (span=29274)  events=185  rows_kept=184  elapsed=173s
+  chunk 8/11  frames 3047127-3077029 (span=29902)  events=89  rows_kept=89  elapsed=189s
+  chunk 9/11  frames 3077183-3107153 (span=29970)  events=106  rows_kept=106  elapsed=208s
+  chunk 10/11  frames 3107389-3136789 (span=29400)  events=99  rows_kept=99  elapsed=227s
+  chunk 11/11  frames 3139357-3140595 (span=1238)  events=10  rows_kept=10  elapsed=229s
+  1,282 rows total (229s)
+
+[Frankfurt_Bayern] loading event index...
+  1,531 events queued
+  10 chunk(s)  (max_frame_span=30000, max_events=250)
+  chunk 1/10  frames 3332016-3361016 (span=29000)  events=176  rows_kept=176  elapsed=31s
+  chunk 2/10  frames 3362830-3392460 (span=29630)  events=129  rows_kept=129  elapsed=53s
+  chunk 3/10  frames 3392930-3422286 (span=29356)  events=200  rows_kept=200  elapsed=86s
+  chunk 4/10  frames 3423420-3453290 (span=29870)  events=182  rows_kept=182  elapsed=118s
+  chunk 5/10  frames 3453678-3476070 (span=22392)  events=126  rows_kept=126  elapsed=140s
+  chunk 6/10  frames 3526520-3556496 (span=29976)  events=142  rows_kept=141  elapsed=164s
+  chunk 7/10  frames 3556572-3586402 (span=29830)  events=173  rows_kept=172  elapsed=192s
+  chunk 8/10  frames 3588228-3618194 (span=29966)  events=149  rows_kept=148  elapsed=217s
+  chunk 9/10  frames 3618320-3648302 (span=29982)  events=126  rows_kept=126  elapsed=238s
+  chunk 10/10  frames 3648456-3674102 (span=25646)  events=128  rows_kept=127  elapsed=258s
+  1,527 rows total (258s)
+
+[Frankfurt_Union] loading event index...
+  1,255 events queued
+  12 chunk(s)  (max_frame_span=30000, max_events=250)
+  chunk 1/12  frames 2790157-2820101 (span=29944)  events=92  rows_kept=92  elapsed=18s
+  chunk 2/12  frames 2820171-2850165 (span=29994)  events=140  rows_kept=140  elapsed=42s
+  chunk 3/12  frames 2850235-2876397 (span=26162)  events=143  rows_kept=143  elapsed=68s
+  chunk 4/12  frames 2880393-2909599 (span=29206)  events=135  rows_kept=135  elapsed=93s
+  chunk 5/12  frames 2910691-2940501 (span=29810)  events=155  rows_kept=154  elapsed=120s
+  chunk 6/12  frames 2940707-2942081 (span=1374)  events=6  rows_kept=6  elapsed=121s
+  chunk 7/12  frames 2988798-3018778 (span=29980)  events=106  rows_kept=102  elapsed=140s
+  chunk 8/12  frames 3018882-3048864 (span=29982)  events=129  rows_kept=128  elapsed=162s
+  chunk 9/12  frames 3048972-3078960 (span=29988)  events=124  rows_kept=124  elapsed=184s
+  chunk 10/12  frames 3079066-3100668 (span=21602)  events=91  rows_kept=91  elapsed=202s
+  chunk 11/12  frames 3115234-3144744 (span=29510)  events=92  rows_kept=92  elapsed=221s
+  chunk 12/12  frames 3145302-3154426 (span=9124)  events=42  rows_kept=42  elapsed=228s
+  1,249 rows total (228s)
+
+[Union_Bayern] loading event index...
+  1,395 events queued
+  10 chunk(s)  (max_frame_span=30000, max_events=250)
+  chunk 1/10  frames 2790563-2815717 (span=25154)  events=129  rows_kept=128  elapsed=22s
+  chunk 2/10  frames 2821301-2851103 (span=29802)  events=140  rows_kept=139  elapsed=44s
+  chunk 3/10  frames 2851629-2881393 (span=29764)  events=135  rows_kept=135  elapsed=67s
+  chunk 4/10  frames 2881745-2907973 (span=26228)  events=138  rows_kept=138  elapsed=92s
+  chunk 5/10  frames 2915701-2939901 (span=24200)  events=100  rows_kept=100  elapsed=110s
+  chunk 6/10  frames 2989517-3019389 (span=29872)  events=130  rows_kept=130  elapsed=131s
+  chunk 7/10  frames 3019559-3048091 (span=28532)  events=142  rows_kept=138  elapsed=156s
+  chunk 8/10  frames 3051055-3080897 (span=29842)  events=173  rows_kept=170  elapsed=188s
+  chunk 9/10  frames 3081267-3111219 (span=29952)  events=145  rows_kept=144  elapsed=214s
+  chunk 10/10  frames 3111277-3140881 (span=29604)  events=163  rows_kept=163  elapsed=247s
+  1,385 rows total (247s)
+
+Raw rows: 6,923 -> test/dos_validation_raw.csv
+
+=== Mann-Whitney U ===
+  led_to_chance (xg>0) — ALL          p=    0.0048  rbc=+0.058  med 0.0109 vs 0.0092
+  back_line_break — ALL               p=    1.0000  rbc=-0.463  med 0.0006 vs 0.0094
+  successfully_completed (passes)     p=    0.6268  rbc=-0.008  med 0.0087 vs 0.0092
+  through_ball — ALL                  p=    0.9950  rbc=-0.342  med 0.0018 vs 0.0093
+  led_to_chance — passs only          p=    0.0001  rbc=+0.086  med 0.0112 vs 0.0083
+  led_to_chance — carrys only         p=       n/a  rbc=+nan  med nan vs nan
+  led_to_chance — takeons only        p=    0.3191  rbc=+0.048  med 0.0089 vs 0.0081
+
+=== Quintiles ===
+                 n  dos_mean  success_rate                                success_ci  line_break_rate                                  line_break_ci  chance_rate                                   chance_ci   xg_mean
+dos_q                                                                                                                                                                                                                  
+Q1 (lowest)   1385 -0.001281      0.753069  (0.7314079422382671, 0.7733032490974729)         0.031769    (0.022382671480144403, 0.04115523465703971)     0.106859   (0.09097472924187726, 0.1220216606498195)  0.010839
+Q2            1384  0.003657      0.679191  (0.6553468208092486, 0.7030346820809249)         0.005780   (0.002167630057803468, 0.010115606936416185)     0.094653    (0.078757225433526, 0.10982658959537572)  0.010472
+Q3            1385  0.009332      0.623827  (0.5978339350180505, 0.6498194945848376)         0.005776  (0.0021660649819494585, 0.009386281588447653)     0.096029  (0.08014440433212996, 0.11191335740072202)  0.010061
+Q4            1384  0.016200      0.634393  (0.6098085260115607, 0.6604226878612717)         0.004335   (0.001445086705202312, 0.007947976878612716)     0.120665  (0.10404624277456648, 0.13800578034682082)  0.011517
+Q5 (highest)  1385  0.030802      0.685199   (0.662797833935018, 0.7097472924187725)         0.002888  (0.0007220216606498195, 0.005776173285198556)     0.129964  (0.11263537906137185, 0.14657039711191336)  0.014406
+
+=== Direction class ===
+                    n  dos_mean  success_rate  line_break_rate  chance_rate  awareness_mean   xg_mean
+direction_class                                                                                      
+forward          1137  0.012070      0.437115         0.031662     0.074758        0.404185  0.010808
+diagonal         2272  0.012064      0.630282         0.014525     0.117077        0.416295  0.012252
+sideways         3514  0.011429      0.781161         0.000285     0.116107        0.463310  0.011156
+
+Report written: test/dos_validation_report.md
+
+Done in 1224s
+[validate_dos] OK in 1224.9s
+
+========================================================================
+[fix_carry] Fix carry/possession xG link (post-process)
+  $ python3 test/fix_carry_possession_link.py
+========================================================================
+Loading raw: test/dos_validation_raw.csv
+  6,923 rows, 759 with xg>0
+  [Bayern_Hamburg] rows fixed: 63 / 1480
+  [Dortmund_Stuttgart] rows fixed: 60 / 1282
+  [Frankfurt_Bayern] rows fixed: 29 / 1527
+  [Frankfurt_Union] rows fixed: 50 / 1249
+  [Union_Bayern] rows fixed: 65 / 1385
+After fix: 1020 rows with xg>0
+Wrote: test/dos_validation_raw_fixed.csv
+Wrote: test/dos_validation_report_fixed.md
+Wrote: test/dos_validation_quintiles_fixed.png
+[fix_carry] OK in 2.3s
+
+========================================================================
+[enrich_xt] Enrich with xT-delta (Karun Singh 2018)
+  $ python3 test/enrich_with_xt.py
+========================================================================
+Loading test/dos_validation_raw_fixed.csv: 6,923 rows
+Coords resolved: 6,923/6,923 (100.0%)
+             sum  size
+event_type            
+carry       1604  1604
+pass        5128  5128
+takeon       191   191
+
+pass: n=5128, xt_origin mean=0.0174, xt_delta mean=-0.0011, p50=-0.0001, p95=+0.0080
+
+carry: n=1604, xt_origin mean=0.0175, xt_delta mean=+0.0030, p50=+0.0010, p95=+0.0157
+
+takeon: n=191, xt_origin mean=0.0303, xt_delta mean=+0.0000, p50=+0.0000, p95=+0.0000
+
+Wrote: test/dos_validation_raw_xt.csv
+[enrich_xt] OK in 1.2s
+
+========================================================================
+[enrich_ddef] Enrich with D-Def Goes 2019 + Forcher 2024 + PCA
+  $ python3 test/enrich_with_ddef.py
+========================================================================
+Loaded test/dos_validation_raw_xt.csv: 6,923 rows
+
+[Bayern_Hamburg] D-def enrichment: 1480 events
+  GK jerseys: {1: 1, 0: 1}
+  11 chunks (max_span=30000, max_events=250)
+  chunk 1/11  frames 3330918-3357278  events=171  rows_kept=171  elapsed=7s
+  chunk 2/11  frames 3361050-3391032  events=188  rows_kept=188  elapsed=16s
+  chunk 3/11  frames 3391084-3419456  events=55  rows_kept=55  elapsed=19s
+  chunk 4/11  frames 3421930-3451906  events=160  rows_kept=160  elapsed=27s
+  chunk 5/11  frames 3451938-3481902  events=156  rows_kept=156  elapsed=34s
+  chunk 6/11  frames 3482038-3482622  events=5  rows_kept=5  elapsed=34s
+  chunk 7/11  frames 3536386-3566286  events=192  rows_kept=192  elapsed=43s
+  chunk 8/11  frames 3566398-3592130  events=142  rows_kept=142  elapsed=50s
+  chunk 9/11  frames 3597918-3622466  events=133  rows_kept=133  elapsed=55s
+  chunk 10/11  frames 3629068-3658632  events=184  rows_kept=184  elapsed=64s
+  chunk 11/11  frames 3662428-3677116  events=94  rows_kept=94  elapsed=68s
+
+[Dortmund_Stuttgart] D-def enrichment: 1282 events
+Traceback (most recent call last):
+  File "/home/ec2-user/Diagonality_3D/test/enrich_with_ddef.py", line 247, in <module>
+    main()
+  File "/home/ec2-user/Diagonality_3D/test/enrich_with_ddef.py", line 207, in main
+    rows = _process_match(df, m)
+  File "/home/ec2-user/Diagonality_3D/test/enrich_with_ddef.py", line 177, in _process_match
+    gk_jerseys = _gk_jersey_per_team(match)
+  File "/home/ec2-user/Diagonality_3D/test/enrich_with_ddef.py", line 67, in _gk_jersey_per_team
+    info = load_match_info(match)
+  File "/home/ec2-user/Diagonality_3D/./src/loader.py", line 414, in load_match_info
+    tree = ET.parse(path)
+  File "/home/ec2-user/miniconda3/envs/diag/lib/python3.10/xml/etree/ElementTree.py", line 1222, in parse
+    tree.parse(source, parser)
+  File "/home/ec2-user/miniconda3/envs/diag/lib/python3.10/xml/etree/ElementTree.py", line 569, in parse
+    source = open(source, "rb")
+FileNotFoundError: [Errno 2] No such file or directory: '/home/ec2-user/Diagonality_3D/data/hackathon/Match_Data/Dortmund_Stuttgart/MatchInformations_Dortmund_Stuttgart.xml'
+[enrich_ddef] FAILED rc=1 in 69.7s
+
+
+=== pipeline run @ 2026-05-03T09:23:27 ===
+
+========================================================================
+[enrich_ddef] Enrich with D-Def Goes 2019 + Forcher 2024 + PCA
+  $ python3 test/enrich_with_ddef.py
+========================================================================
+Loaded test/dos_validation_raw_xt.csv: 6,923 rows
+
+[Bayern_Hamburg] D-def enrichment: 1480 events
+  GK jerseys: {1: 1, 0: 1}
+  11 chunks (max_span=30000, max_events=250)
+  chunk 1/11  frames 3330918-3357278  events=171  rows_kept=171  elapsed=7s
+  chunk 2/11  frames 3361050-3391032  events=188  rows_kept=188  elapsed=16s
+  chunk 3/11  frames 3391084-3419456  events=55  rows_kept=55  elapsed=19s
+  chunk 4/11  frames 3421930-3451906  events=160  rows_kept=160  elapsed=26s
+  chunk 5/11  frames 3451938-3481902  events=156  rows_kept=156  elapsed=33s
+  chunk 6/11  frames 3482038-3482622  events=5  rows_kept=5  elapsed=34s
+  chunk 7/11  frames 3536386-3566286  events=192  rows_kept=192  elapsed=43s
+  chunk 8/11  frames 3566398-3592130  events=142  rows_kept=142  elapsed=49s
+  chunk 9/11  frames 3597918-3622466  events=133  rows_kept=133  elapsed=55s
+  chunk 10/11  frames 3629068-3658632  events=184  rows_kept=184  elapsed=64s
+  chunk 11/11  frames 3662428-3677116  events=94  rows_kept=94  elapsed=68s
+
+[Dortmund_Stuttgart] D-def enrichment: 1282 events
+  GK jerseys: {1: 1, 0: 33}
+  11 chunks (max_span=30000, max_events=250)
+  chunk 1/11  frames 2790113-2820083  events=156  rows_kept=156  elapsed=7s
+  chunk 2/11  frames 2820333-2850159  events=158  rows_kept=158  elapsed=14s
+  chunk 3/11  frames 2850361-2880331  events=136  rows_kept=136  elapsed=21s
+  chunk 4/11  frames 2880451-2910415  events=89  rows_kept=89  elapsed=25s
+  chunk 5/11  frames 2910691-2934413  events=126  rows_kept=126  elapsed=30s
+  chunk 6/11  frames 2984239-3007407  events=129  rows_kept=129  elapsed=36s
+  chunk 7/11  frames 3016479-3045753  events=184  rows_kept=184  elapsed=44s
+  chunk 8/11  frames 3047127-3077029  events=89  rows_kept=89  elapsed=48s
+  chunk 9/11  frames 3077183-3107153  events=106  rows_kept=106  elapsed=53s
+  chunk 10/11  frames 3107389-3136789  events=99  rows_kept=99  elapsed=58s
+  chunk 11/11  frames 3139357-3140595  events=10  rows_kept=10  elapsed=58s
+
+[Frankfurt_Bayern] D-def enrichment: 1527 events
+  GK jerseys: {1: 40, 0: 1}
+  10 chunks (max_span=30000, max_events=250)
+  chunk 1/10  frames 3332016-3361016  events=176  rows_kept=176  elapsed=8s
+  chunk 2/10  frames 3362830-3392460  events=129  rows_kept=129  elapsed=13s
+  chunk 3/10  frames 3392930-3422286  events=200  rows_kept=200  elapsed=23s
+  chunk 4/10  frames 3423420-3453290  events=182  rows_kept=182  elapsed=31s
+  chunk 5/10  frames 3453678-3476070  events=126  rows_kept=126  elapsed=37s
+  chunk 6/10  frames 3526520-3556496  events=141  rows_kept=141  elapsed=43s
+  chunk 7/10  frames 3556572-3586402  events=172  rows_kept=172  elapsed=51s
+  chunk 8/10  frames 3588228-3618194  events=148  rows_kept=148  elapsed=58s
+  chunk 9/10  frames 3618320-3648302  events=126  rows_kept=126  elapsed=63s
+  chunk 10/10  frames 3648456-3674102  events=127  rows_kept=127  elapsed=69s
+
+[Frankfurt_Union] D-def enrichment: 1249 events
+  GK jerseys: {1: 40, 0: 1}
+  12 chunks (max_span=30000, max_events=250)
+  chunk 1/12  frames 2790157-2820101  events=92  rows_kept=92  elapsed=4s
+  chunk 2/12  frames 2820171-2850165  events=140  rows_kept=140  elapsed=11s
+  chunk 3/12  frames 2850235-2876397  events=143  rows_kept=143  elapsed=17s
+  chunk 4/12  frames 2880393-2909599  events=135  rows_kept=135  elapsed=23s
+  chunk 5/12  frames 2910691-2940501  events=154  rows_kept=154  elapsed=30s
+  chunk 6/12  frames 2940707-2942081  events=6  rows_kept=6  elapsed=31s
+  chunk 7/12  frames 2988798-3018778  events=102  rows_kept=102  elapsed=35s
+  chunk 8/12  frames 3018882-3048864  events=128  rows_kept=128  elapsed=41s
+  chunk 9/12  frames 3048972-3078960  events=124  rows_kept=124  elapsed=47s
+  chunk 10/12  frames 3079066-3100668  events=91  rows_kept=91  elapsed=51s
+  chunk 11/12  frames 3115234-3144744  events=92  rows_kept=92  elapsed=55s
+  chunk 12/12  frames 3145302-3154426  events=42  rows_kept=42  elapsed=57s
+
+[Union_Bayern] D-def enrichment: 1385 events
+  GK jerseys: {1: 1, 0: 1}
+  10 chunks (max_span=30000, max_events=250)
+  chunk 1/10  frames 2790563-2815717  events=128  rows_kept=128  elapsed=5s
+  chunk 2/10  frames 2821301-2851103  events=139  rows_kept=139  elapsed=12s
+  chunk 3/10  frames 2851629-2881393  events=135  rows_kept=135  elapsed=18s
+  chunk 4/10  frames 2881745-2907973  events=138  rows_kept=138  elapsed=23s
+  chunk 5/10  frames 2915701-2939901  events=100  rows_kept=100  elapsed=28s
+  chunk 6/10  frames 2989517-3019389  events=130  rows_kept=130  elapsed=34s
+  chunk 7/10  frames 3019559-3048091  events=138  rows_kept=138  elapsed=40s
+  chunk 8/10  frames 3051055-3080897  events=170  rows_kept=170  elapsed=48s
+  chunk 9/10  frames 3081267-3111219  events=144  rows_kept=144  elapsed=55s
+  chunk 10/10  frames 3111277-3140881  events=163  rows_kept=163  elapsed=62s
+
+D-def rows: 6,923
+Merged shape: (6923, 84)
+
+Running Z-score + PCA across the full dataset...
+  PCA 2s explained variance ratios: PC1=0.274 PC2=0.249 PC3=0.230
+  PCA 3s explained variance ratios: PC1=0.280 PC2=0.252 PC3=0.232
+
+Wrote: test/dos_validation_raw_xt_ddef.csv
+[enrich_ddef] OK in 317.0s
+
+========================================================================
+[enrich_theta] Enrich with theta orientation metrics (defender + receiver)
+  $ python3 test/enrich_with_theta.py
+========================================================================
+Loaded test/dos_validation_raw_xt_ddef.csv: 6,923 rows
+
+[Bayern_Hamburg] theta enrichment: 1480 events
+  event lookup: 1514 entries
+  11 chunks
+  chunk 1/11  frames 3330918-3357278  events=171  rows_kept=171  elapsed=3s
+  chunk 2/11  frames 3361050-3391032  events=188  rows_kept=188  elapsed=7s
+  chunk 3/11  frames 3391084-3419456  events=55  rows_kept=55  elapsed=9s
+  chunk 4/11  frames 3421930-3451906  events=160  rows_kept=160  elapsed=12s
+  chunk 5/11  frames 3451938-3481902  events=156  rows_kept=156  elapsed=15s
+  chunk 6/11  frames 3482038-3482622  events=5  rows_kept=5  elapsed=16s
+  chunk 7/11  frames 3536386-3566286  events=192  rows_kept=192  elapsed=20s
+  chunk 8/11  frames 3566398-3592130  events=142  rows_kept=142  elapsed=23s
+  chunk 9/11  frames 3597918-3622466  events=133  rows_kept=133  elapsed=25s
+  chunk 10/11  frames 3629068-3658632  events=184  rows_kept=184  elapsed=29s
+  chunk 11/11  frames 3662428-3677116  events=94  rows_kept=94  elapsed=31s
+
+[Dortmund_Stuttgart] theta enrichment: 1282 events
+  event lookup: 1315 entries
+  11 chunks
+  chunk 1/11  frames 2790113-2820083  events=156  rows_kept=156  elapsed=3s
+  chunk 2/11  frames 2820333-2850159  events=158  rows_kept=158  elapsed=6s
+  chunk 3/11  frames 2850361-2880331  events=136  rows_kept=136  elapsed=10s
+  chunk 4/11  frames 2880451-2910415  events=89  rows_kept=89  elapsed=12s
+  chunk 5/11  frames 2910691-2934413  events=126  rows_kept=126  elapsed=14s
+  chunk 6/11  frames 2984239-3007407  events=129  rows_kept=129  elapsed=17s
+  chunk 7/11  frames 3016479-3045753  events=184  rows_kept=184  elapsed=20s
+  chunk 8/11  frames 3047127-3077029  events=89  rows_kept=89  elapsed=22s
+  chunk 9/11  frames 3077183-3107153  events=106  rows_kept=106  elapsed=25s
+  chunk 10/11  frames 3107389-3136789  events=99  rows_kept=99  elapsed=27s
+  chunk 11/11  frames 3139357-3140595  events=10  rows_kept=10  elapsed=27s
+
+[Frankfurt_Bayern] theta enrichment: 1527 events
+  event lookup: 1561 entries
+  10 chunks
+  chunk 1/10  frames 3332016-3361016  events=176  rows_kept=176  elapsed=3s
+  chunk 2/10  frames 3362830-3392460  events=129  rows_kept=129  elapsed=6s
+  chunk 3/10  frames 3392930-3422286  events=200  rows_kept=200  elapsed=10s
+  chunk 4/10  frames 3423420-3453290  events=182  rows_kept=182  elapsed=14s
+  chunk 5/10  frames 3453678-3476070  events=126  rows_kept=126  elapsed=17s
+  chunk 6/10  frames 3526520-3556496  events=141  rows_kept=141  elapsed=20s
+  chunk 7/10  frames 3556572-3586402  events=172  rows_kept=172  elapsed=23s
+  chunk 8/10  frames 3588228-3618194  events=148  rows_kept=148  elapsed=26s
+  chunk 9/10  frames 3618320-3648302  events=126  rows_kept=126  elapsed=29s
+  chunk 10/10  frames 3648456-3674102  events=127  rows_kept=127  elapsed=31s
+
+[Frankfurt_Union] theta enrichment: 1249 events
+  event lookup: 1297 entries
+  12 chunks
+  chunk 1/12  frames 2790157-2820101  events=92  rows_kept=92  elapsed=2s
+  chunk 2/12  frames 2820171-2850165  events=140  rows_kept=140  elapsed=5s
+  chunk 3/12  frames 2850235-2876397  events=143  rows_kept=143  elapsed=8s
+  chunk 4/12  frames 2880393-2909599  events=135  rows_kept=135  elapsed=11s
+  chunk 5/12  frames 2910691-2940501  events=154  rows_kept=154  elapsed=14s
+  chunk 6/12  frames 2940707-2942081  events=6  rows_kept=6  elapsed=14s
+  chunk 7/12  frames 2988798-3018778  events=102  rows_kept=102  elapsed=17s
+  chunk 8/12  frames 3018882-3048864  events=128  rows_kept=128  elapsed=19s
+  chunk 9/12  frames 3048972-3078960  events=124  rows_kept=124  elapsed=22s
+  chunk 10/12  frames 3079066-3100668  events=91  rows_kept=91  elapsed=24s
+  chunk 11/12  frames 3115234-3144744  events=92  rows_kept=92  elapsed=26s
+  chunk 12/12  frames 3145302-3154426  events=42  rows_kept=42  elapsed=27s
+
+[Union_Bayern] theta enrichment: 1385 events
+  event lookup: 1413 entries
+  10 chunks
+  chunk 1/10  frames 2790563-2815717  events=128  rows_kept=128  elapsed=3s
+  chunk 2/10  frames 2821301-2851103  events=139  rows_kept=139  elapsed=5s
+  chunk 3/10  frames 2851629-2881393  events=135  rows_kept=135  elapsed=8s
+  chunk 4/10  frames 2881745-2907973  events=138  rows_kept=138  elapsed=10s
+  chunk 5/10  frames 2915701-2939901  events=100  rows_kept=100  elapsed=13s
+  chunk 6/10  frames 2989517-3019389  events=130  rows_kept=130  elapsed=15s
+  chunk 7/10  frames 3019559-3048091  events=138  rows_kept=138  elapsed=18s
+  chunk 8/10  frames 3051055-3080897  events=170  rows_kept=170  elapsed=22s
+  chunk 9/10  frames 3081267-3111219  events=144  rows_kept=144  elapsed=25s
+  chunk 10/10  frames 3111277-3140881  events=163  rows_kept=163  elapsed=28s
+
+Theta rows: 6,923
+Merged shape: (6923, 113)
+Events with theta: 6,732/6,923 (97.2%)
+
+Wrote: test/dos_validation_raw_xt_ddef_theta.csv
+[enrich_theta] OK in 147.5s
+
+========================================================================
+[stats_xt] xT-based outcome statistics report
+  $ python3 test/compute_stats_xt.py
+========================================================================
+Loaded test/dos_validation_raw_xt.csv: 6,923 rows
+
+=== Mann-Whitney U (xT outcome) ===
+  ALL events                p=  1.16e-25 rbc=+0.145  n+= 3757 n−= 3166
+  passes only               p=  1.21e-06 rbc=+0.076  n+= 2517 n−= 2611
+  carries only              p=  1.22e-36 rbc=+0.402  n+= 1145 n−=  459
+  takeons only              p=    0.2104 rbc=+0.068  n+=   95 n−=   96
+
+=== Spearman ρ (DOS, outcome) ===
+  ALL events                n= 6923  ρ=+0.1009  p=  3.92e-17
+  passes only               n= 5128  ρ=+0.0443  p=    0.0015
+  carries only              n= 1604  ρ=+0.3180  p=  5.05e-39
+  takeons only              n=  191  ρ=-0.0415  p=    0.5691
+
+=== Quintiles ===
+                 n  dos_mean  outcome_mean  outcome_pos_rate  outcome_p95
+dos_q                                                                    
+Q1 (lowest)   1385 -0.001281      0.000199          0.457040     0.012990
+Q2            1384  0.003657      0.001230          0.510838     0.016335
+Q3            1385  0.009332      0.001041          0.583394     0.014560
+Q4            1384  0.016200      0.000837          0.602601     0.013478
+Q5 (highest)  1385  0.030802      0.000412          0.628881     0.015534
+
+=== Direction class ===
+                    n  dos_mean  outcome_mean  outcome_pos_rate  awareness_mean
+direction_class                                                                
+forward          1137  0.012070      0.002828          0.743184        0.404185
+diagonal         2272  0.012064      0.002674          0.822183        0.416295
+sideways         3514  0.011429     -0.001179          0.324417        0.463310
+
+=== Per-event-type ===
+               n  dos_mean  xt_origin_mean  outcome_mean  outcome_pos_rate  diag_share
+event_type                                                                            
+carry       1604  0.012493        0.017542      0.002973          0.713840    0.365960
+pass        5128  0.011559        0.017444     -0.001056          0.490835    0.315133
+takeon       191  0.010361        0.030330      0.030330          1.000000    0.361257
+
+Report: test/dos_validation_report_xt.md
+Plot:   test/dos_validation_quintiles_xt.png
+[stats_xt] OK in 1.9s
+
+========================================================================
+[stats_ddef] D-Def H2 statistics report (bi-axial disruption)
+  $ python3 test/compute_stats_ddef.py
+========================================================================
+Loaded test/dos_validation_raw_xt_ddef.csv: 6,923 rows
+
+=== Direction class — D-Def axes ===
+                    n  abs_pc1  abs_pc2  abs_pc3    ddef  per_class_balance  per_event_balance_mean  local_delta_area  local_delta_spread
+direction_class                                                                                                                          
+forward          1137   1.5250   1.3341   1.7514  4.6105             0.8748                  0.4441          -15.7600             -0.2151
+diagonal         2272   1.4026   1.6063   1.4322  4.4411             0.8732                  0.4345           -0.5241              0.1138
+sideways         3514   1.6622   1.4999   1.1577  4.3198             0.9023                  0.4340           11.4142              0.3596
+
+=== Per event-type ===
+               n  abs_pc1  abs_pc2    ddef  biaxial_mean
+event_type                                              
+carry       1604   1.7086   1.7057  4.8488        0.4417
+pass        5128   1.5039   1.4596  4.2771        0.4340
+takeon       191   1.6235   1.1041  4.1774        0.4368
+
+=== H2: diagonal disrupts bi-axial vs orthogonal? ===
+                         test  n_diag  n_other  median_diag  median_other     rbc      p
+          diagonal vs forward    2267     1134       0.4144        0.4155 -0.0213 0.8445
+         diagonal vs sideways    2267     3508       0.4144        0.4035  0.0019 0.4506
+ diagonal vs ortho (fwd+side)    2267     4642       0.4144        0.4068 -0.0037 0.5997
+diagonal vs forward [PC1+PC2]    2267     1134       2.9062        2.6166  0.0741 0.0002
+    diagonal vs forward [PC1]    2267     1134       1.1583        1.2507 -0.0504 0.9918
+    diagonal vs forward [PC2]    2267     1134       1.4626        1.1329  0.1419 0.0000
+   diagonal vs sideways [PC1]    2267     3508       1.1583        1.3665 -0.1115 1.0000
+   diagonal vs sideways [PC2]    2267     3508       1.4626        1.2571  0.0679 0.0000
+
+=== DOS ↔ D-Def correlations (Spearman ρ) ===
+            target    n     rho      p
+            pc1_3s 6909 -0.1434 0.0000
+            pc2_3s 6909 -0.2089 0.0000
+            pc3_3s 6909 -0.0791 0.0000
+           ddef_3s 6909 -0.3023 0.0000
+  local_delta_area 6909 -0.1878 0.0000
+local_delta_spread 6909 -0.2128 0.0000
+           biaxial 6909 -0.0001 0.9907
+
+=== Logistic: P(high biaxial balance) ~ DOS + controls ===
+  N=4761, threshold=0.4047, Pseudo R²=0.0006, LLR p=0.5871
+  const              +0.1651  p=0.3958
+  dos                -2.1294  p=0.3942
+  distance           +0.0006  p=0.8467
+  pressure_player    -0.0808  p=0.4487
+  n_def_lane         +0.0293  p=0.3041
+  n_def_goal         -0.0176  p=0.3174
+
+Plot:   test/dos_validation_ddef_axes.png
+Report: test/dos_validation_report_ddef.md
+[stats_ddef] OK in 2.2s
+
+========================================================================
+[stats_theta] Theta orientation report (storytelling cifras)
+  $ python3 test/compute_stats_theta.py
+========================================================================
+Loaded test/dos_validation_raw_xt_ddef_theta.csv: 6,923 rows
+
+=== Passes — per-direction summary ===
+                    n  mean_theta_shoulder_deg  mean_theta_head_deg  pct_nearest_blind  mean_n_wrongfooted  mean_pct_wrongfooted  mean_theta_affected_deg  receiver_open_deg  receiver_turn_deg  n_teammates_in_fov
+direction_class                                                                                                                                                                                                    
+forward           725                    51.68                54.06               0.41                2.75                  0.93                   121.33             135.03             144.51                4.95
+diagonal         1616                    43.87                42.12               0.34                2.07                  0.91                   115.66             102.12             108.45                6.03
+sideways         2787                    37.74                31.23               0.29                1.14                  0.94                   115.17              57.90              59.94                5.12
+
+=== Carries — per-direction summary ===
+                   n  mean_theta_shoulder_deg  mean_theta_head_deg  pct_nearest_blind  mean_n_wrongfooted  mean_pct_wrongfooted  mean_theta_affected_deg
+direction_class                                                                                                                                         
+forward          373                    39.43                22.22               0.05                0.64                  0.50                    69.19
+diagonal         587                    37.65                21.68               0.03                0.66                  0.56                    74.41
+sideways         644                    30.71                16.59               0.05                0.89                  0.53                    73.05
+
+=== Passes — diagonal vs forward MWU ===
+                        metric     alt  n_diag  n_fwd  median_diag  median_fwd     rbc      p
+Defender shoulder misalignment greater    1616    725       0.6867      0.7834 -0.2107 1.0000
+    Defender head misalignment greater    1616    725       0.6229      0.7831 -0.2130 1.0000
+Nearest defender in blind half greater    1616    725       0.0000      0.0000 -0.0685 0.9993
+         Wrongfooted defenders greater    1616    725       2.0000      2.0000 -0.2397 1.0000
+     % wrongfooted of affected greater    1447    682       1.0000      1.0000  0.0002 0.4952
+      Receiver body→goal angle    less    1114    384       1.7584      2.5445 -0.4377 0.0000
+      Receiver head→goal angle    less    1114    384       1.9134      2.7025 -0.5546 0.0000
+     Teammates in receiver FOV greater    1114    384       6.0000      5.0000  0.2183 0.0000
+
+=== Carries — diagonal vs forward MWU ===
+                        metric     alt  n_diag  n_fwd  median_diag  median_fwd     rbc      p
+Defender shoulder misalignment greater     587    373       0.6325      0.6532 -0.0624 0.9486
+    Defender head misalignment greater     587    373       0.3489      0.3419  0.0038 0.4601
+Nearest defender in blind half greater     587    373       0.0000      0.0000 -0.0166 0.9127
+         Wrongfooted defenders greater     587    373       0.0000      0.0000  0.0111 0.3711
+     % wrongfooted of affected greater     352    227       0.6667      0.5000  0.0751 0.0545
+
+Report: test/dos_validation_report_theta.md
+Plot:   test/dos_validation_theta_axes.png
+[stats_theta] OK in 2.0s
+
+========================================================================
+[enrich_meta] Add player_id / player_name / team_name to event CSV
+  $ python3 test/enrich_full_metadata.py
+========================================================================
+Loaded test/dos_validation_raw_xt_ddef_theta.csv: 6,923 rows
+  [Bayern_Hamburg] events->player: 1514, players: 40
+  [Dortmund_Stuttgart] events->player: 1315, players: 40
+  [Frankfurt_Bayern] events->player: 1561, players: 40
+  [Frankfurt_Union] events->player: 1297, players: 40
+  [Union_Bayern] events->player: 1413, players: 40
+
+Resolved player_id: 6,923/6,923 (100.0%)
+Resolved player_name: 6,923/6,923
+Resolved team_name: 6,923/6,923
+
+Wrote: test/dos_validation_full.csv
+[enrich_meta] OK in 1.7s
+
+========================================================================
+[rankings] Build per-player / per-team / per-match / per-zone ranking tables (incl. awareness + halfspace)
+  $ python3 test/aggregate_rankings.py
+========================================================================
+Loaded test/dos_validation_full.csv: 6,923 rows
+  players_by_dos                   30 rows -> outputs/tables/players_by_dos.csv
+  players_by_xt                    30 rows -> outputs/tables/players_by_xt.csv
+  players_by_ddef                  30 rows -> outputs/tables/players_by_ddef.csv
+  players_by_wrongfooting          30 rows -> outputs/tables/players_by_wrongfooting.csv
+  players_by_awareness_low         30 rows -> outputs/tables/players_by_awareness_low.csv
+  players_by_diag_share            30 rows -> outputs/tables/players_by_diag_share.csv
+  players_by_volume                30 rows -> outputs/tables/players_by_volume.csv
+  teams_summary                     6 rows -> outputs/tables/teams_summary.csv
+  matches_summary                   5 rows -> outputs/tables/matches_summary.csv
+  matches_team_dir_breakdown       30 rows -> outputs/tables/matches_team_dir_breakdown.csv
+  direction_breakdown               3 rows -> outputs/tables/direction_breakdown.csv
+  zones_origin_breakdown            3 rows -> outputs/tables/zones_origin_breakdown.csv
+  zones_dest_breakdown              3 rows -> outputs/tables/zones_dest_breakdown.csv
+  zones_x_direction                 9 rows -> outputs/tables/zones_x_direction.csv
+  events_per_player_match         154 rows -> outputs/tables/events_per_player_match.csv
+  top_events_full_vector           50 rows -> outputs/tables/top_events_full_vector.csv
+
+=== TOP 5 BY MEAN DOS (min 30 events) ===
+player_name          team_name  n_events  dos_mean  diag_share
+J. Leweling      VfB Stuttgart        55    0.0169      0.2364
+Tiago Tomás      VfB Stuttgart        45    0.0162      0.3333
+  Luis Díaz  FC Bayern München       158    0.0159      0.2215
+ A. Schäfer 1. FC Union Berlin        33    0.0158      0.2727
+ N. Jackson  FC Bayern München        40    0.0152      0.2000
+[rankings] OK in 1.7s
+
+========================================================================
+[select_top] Pick top-N events for video / frame rendering
+  $ python3 test/select_top_events.py
+========================================================================
+Loaded test/dos_validation_full.csv: 6,923 rows
+  top_dos_events.json             10 events -> outputs/tables/top_dos_events.json
+  top_dos_carries.json            10 events -> outputs/tables/top_dos_carries.json
+  top_dos_passes.json             10 events -> outputs/tables/top_dos_passes.json
+  top_xt_events.json              10 events -> outputs/tables/top_xt_events.json
+  top_ddef_events.json            10 events -> outputs/tables/top_ddef_events.json
+  highlight_events.json           25 events -> outputs/tables/highlight_events.json
+
+Gallery composition (25 events):
+top_score          8
+top_diagonal       5
+top_carry          4
+top_takeon         4
+back_line_break    4
+[select_top] OK in 0.6s
+
+========================================================================
+[render_kane_vision] Render Kane goal vision video (50fps, dpi=200)
+  $ python3 test/render_kane_goal.py
+========================================================================
+Video: 35s @ 50fps native (no frame skip)
+Loading skeleton...
+  534,072 skeleton rows
+Computing orientations...
+  25,432 orientation rows
+  1151 render frames (every frame, no skip)
+Rendering (this will take a while — max quality)...
+Saved: test/vision_kane_goal5.mp4 (1151 frames, 1230s)
+[render_kane_vision] OK in 1232.8s
+
+========================================================================
+[render_kane_ppcf_video] Render Kane goal PPCF reach-field video
+  $ python3 test/render_kane_goal_ppcf_video.py
+========================================================================
+Video: 35s @ 50fps native
+  Attacking: team 1 (FC Bayern München)
+  GKs: home=1, away=1
+Loading skeleton...
+  534,072 skeleton rows
+Computing orientations + dynamics...
+  25,432 orientation rows (velocity smoothed, w=13)
+  1151 render frames
+Rendering (max quality — this will take a while)...
+Saved: test/ppcf_kane_goal5.mp4 (1151 frames, 1535s, 1.33s/frame)
+[render_kane_ppcf_video] OK in 1538.0s
+
+========================================================================
+[render_kane_dos_video] Render Kane goal DOS + shadow video
+  $ python3 test/render_kane_goal_dos_video.py
+========================================================================
+Video: 35s @ 50fps native
+  Attacking: team 1 (FC Bayern München)
+  GKs: home=1, away=1
+Loading skeleton...
+  534,072 skeleton rows
+Computing orientations + dynamics...
+  25,432 orientation rows (velocity smoothed, w=13)
+  1151 render frames
+Building possession timeline from carries + passes...
+  11 possession segments in window
+  Modes: {'pass_flight': 5, 'carry': 5, 'reception': 1}
+Computing scanning memory (2.5s window, tau=1.2s, smoothing=2.0)...
+  1751 frame memories computed (32s)
+Rendering DOS video (this will take a LONG while)...
+Saved: test/dos_kane_goal5.mp4 (1151 frames, 2891s, 2.51s/frame)
+[render_kane_dos_video] OK in 2925.7s
+
+========================================================================
+[render_top_dos_videos] Render DOS videos for top-N selected events
+  $ python3 test/render_top_dos_videos.py
+========================================================================
+Loaded outputs/tables/top_dos_events.json: 10 events, parallelism=10
+  + top03_Frankfurt_Union_A._Ilić_pass_3011270.mp4 (2088s)
+  + top06_Frankfurt_Union_N._Brown_pass_2917679.mp4 (2190s)
+  + top08_Frankfurt_Union_A._Knauff_pass_3087788.mp4 (2199s)
+  + top02_Frankfurt_Bayern_Serge_Gnabry_pass_3332702.mp4 (2227s)
+  + top04_Union_Bayern_T._Bischof_pass_3131617.mp4 (2243s)
+  + top10_Bayern_Hamburg_Harry_Kane_pass_3395284.mp4 (2355s)
+  + top09_Bayern_Hamburg_L._Karl_pass_3639170.mp4 (2550s)
+  + top07_Bayern_Hamburg_Joshua_Kimmich_pass_3613622.mp4 (2571s)
+  + top05_Bayern_Hamburg_Luis_Díaz_carry_3393558.mp4 (2650s)
+  + top01_Frankfurt_Bayern_F._Chaïbi_pass_3595150.mp4 (2701s)
+
+DONE: 10 new, 0 skipped, 0 failed (45.0 min wall, 10 workers)
+[render_top_dos_videos] OK in 2704.0s
+
+========================================================================
+[render_top_vision_videos] Render Bekkers VISION videos for top-8 selected events
+  $ python3 test/render_top_vision_videos.py
+========================================================================
+Loaded outputs/tables/top_dos_events.json: rendering top 8 as VISION videos, parallelism=8
+  + top01_vision_Frankfurt_Bayern_F._Chaïbi_pass_3595150.mp4 (707s)
+  + top03_vision_Frankfurt_Union_A._Ilić_pass_3011270.mp4 (948s)
+  + top06_vision_Frankfurt_Union_N._Brown_pass_2917679.mp4 (992s)
+  + top08_vision_Frankfurt_Union_A._Knauff_pass_3087788.mp4 (998s)
+  + top02_vision_Frankfurt_Bayern_Serge_Gnabry_pass_3332702.mp4 (1004s)
+  + top04_vision_Union_Bayern_T._Bischof_pass_3131617.mp4 (1014s)
+  + top05_vision_Bayern_Hamburg_Luis_Díaz_carry_3393558.mp4 (1024s)
+  + top07_vision_Bayern_Hamburg_Joshua_Kimmich_pass_3613622.mp4 (1141s)
+
+DONE: 8 new, 0 skipped, 0 failed (19.1 min wall, 8 workers)
+[render_top_vision_videos] OK in 1145.9s
+
+========================================================================
+[render_top_ppcf_videos] Render PPCF reach-field videos for top-8 selected events
+  $ python3 test/render_top_ppcf_videos.py
+========================================================================
+Loaded outputs/tables/top_dos_events.json: rendering top 8 as PPCF videos, parallelism=8
+  + top03_ppcf_Frankfurt_Union_A._Ilić_pass_3011270.mp4 (1101s)
+  + top02_ppcf_Frankfurt_Bayern_Serge_Gnabry_pass_3332702.mp4 (1154s)
+  + top06_ppcf_Frankfurt_Union_N._Brown_pass_2917679.mp4 (1158s)
+  + top08_ppcf_Frankfurt_Union_A._Knauff_pass_3087788.mp4 (1164s)
+  + top04_ppcf_Union_Bayern_T._Bischof_pass_3131617.mp4 (1172s)
+  + top07_ppcf_Bayern_Hamburg_Joshua_Kimmich_pass_3613622.mp4 (1337s)
+  + top05_ppcf_Bayern_Hamburg_Luis_Díaz_carry_3393558.mp4 (1381s)
+  + top01_ppcf_Frankfurt_Bayern_F._Chaïbi_pass_3595150.mp4 (1423s)
+
+DONE: 8 new, 0 skipped, 0 failed (23.7 min wall, 8 workers)
+[render_top_ppcf_videos] OK in 1426.2s
+
+========================================================================
+[render_kane_ppcf_png] Render Kane goal PPCF static frame
+  $ python3 test/render_kane_goal_ppcf_png.py
+========================================================================
+Loading match info...
+  GK jerseys: home=1 (FC Bayern München), away=1 (Hamburger SV)
+Resolving attacking team from shot event...
+  Shot at frame 3585218 (delta 0)
+  Attacking team: 1 (FC Bayern München)
+Loading cached skeleton + ball...
+  25,872 skeleton rows in window
+Computing orientations + dynamics...
+  Ball position: (43.02, -5.07)
+  Players in frame: 22
+Rendering PPCF frame (n_grid_x=100, window=2.5s)...
+Saved: test/ppcf_kane_goal5.png
+[render_kane_ppcf_png] OK in 11.6s
+
+========================================================================
+[render_top_event_frames] Render top-N event PNGs (DOS + PPCF gallery)
+  $ python3 test/render_top_event_frames.py
+========================================================================
+Loaded outputs/tables/highlight_events.json: 25 events
+
+[Frankfurt_Bayern] 4 events
+  + Frankfurt_Bayern_F._Chaïbi_pass_3595150_dos.png (26.1s)
+  + Frankfurt_Bayern_F._Chaïbi_pass_3595150_ppcf.png (8.5s)
+  + Frankfurt_Bayern_Serge_Gnabry_pass_3332702_dos.png (26.1s)
+  + Frankfurt_Bayern_Serge_Gnabry_pass_3332702_ppcf.png (8.3s)
+  + Frankfurt_Bayern_Serge_Gnabry_carry_3545798_dos.png (25.6s)
+  + Frankfurt_Bayern_Serge_Gnabry_carry_3545798_ppcf.png (8.5s)
+  + Frankfurt_Bayern_Harry_Kane_pass_3545702_dos.png (28.0s)
+  + Frankfurt_Bayern_Harry_Kane_pass_3545702_ppcf.png (8.5s)
+
+[Frankfurt_Union] 5 events
+  + Frankfurt_Union_A._Ilić_pass_3011270_dos.png (24.3s)
+  + Frankfurt_Union_A._Ilić_pass_3011270_ppcf.png (8.5s)
+  + Frankfurt_Union_N._Brown_pass_2917679_dos.png (24.0s)
+  + Frankfurt_Union_N._Brown_pass_2917679_ppcf.png (8.4s)
+  + Frankfurt_Union_A._Knauff_pass_3087788_dos.png (24.4s)
+  + Frankfurt_Union_A._Knauff_pass_3087788_ppcf.png (8.5s)
+  + Frankfurt_Union_L._Querfeld_carry_2912341_dos.png (22.9s)
+  + Frankfurt_Union_L._Querfeld_carry_2912341_ppcf.png (8.4s)
+  + Frankfurt_Union_J._Haberer_pass_3086640_dos.png (23.3s)
+  + Frankfurt_Union_J._Haberer_pass_3086640_ppcf.png (8.5s)
+
+[Union_Bayern] 6 events
+  + Union_Bayern_T._Bischof_pass_3131617_dos.png (29.2s)
+  + Union_Bayern_T._Bischof_pass_3131617_ppcf.png (8.3s)
+  + Union_Bayern_Luis_Díaz_carry_2923445_dos.png (28.9s)
+  + Union_Bayern_Luis_Díaz_carry_2923445_ppcf.png (8.4s)
+  + Union_Bayern_A._Schäfer_takeon_2829183_dos.png (27.6s)
+  + Union_Bayern_A._Schäfer_takeon_2829183_ppcf.png (8.5s)
+  + Union_Bayern_Luis_Díaz_takeon_2852697_dos.png (26.0s)
+  + Union_Bayern_Luis_Díaz_takeon_2852697_ppcf.png (8.5s)
+  + Union_Bayern_A._Pavlović_takeon_3104279_dos.png (28.4s)
+  + Union_Bayern_A._Pavlović_takeon_3104279_ppcf.png (8.3s)
+  + Union_Bayern_J._Stanišić_pass_2907683_dos.png (27.3s)
+  + Union_Bayern_J._Stanišić_pass_2907683_ppcf.png (8.4s)
+
+[Bayern_Hamburg] 6 events
+  + Bayern_Hamburg_Luis_Díaz_carry_3393558_dos.png (26.3s)
+  + Bayern_Hamburg_Luis_Díaz_carry_3393558_ppcf.png (8.6s)
+  + Bayern_Hamburg_Joshua_Kimmich_pass_3613622_dos.png (26.1s)
+  + Bayern_Hamburg_Joshua_Kimmich_pass_3613622_ppcf.png (8.3s)
+  + Bayern_Hamburg_W._Mikelbrencis_carry_3383054_dos.png (28.5s)
+  + Bayern_Hamburg_W._Mikelbrencis_carry_3383054_ppcf.png (8.7s)
+  + Bayern_Hamburg_Miro_Muheim_pass_3353406_dos.png (25.5s)
+  + Bayern_Hamburg_Miro_Muheim_pass_3353406_ppcf.png (8.5s)
+  + Bayern_Hamburg_A._Soumahoro_pass_3377770_dos.png (26.8s)
+  + Bayern_Hamburg_A._Soumahoro_pass_3377770_ppcf.png (8.5s)
+  + Bayern_Hamburg_Harry_Kane_pass_3395284_dos.png (26.2s)
+  + Bayern_Hamburg_Harry_Kane_pass_3395284_ppcf.png (8.4s)
+
+[Dortmund_Stuttgart] 4 events
+  + Dortmund_Stuttgart_Serhou_Guirassy_carry_3094425_dos.png (28.1s)
+  + Dortmund_Stuttgart_Serhou_Guirassy_carry_3094425_ppcf.png (8.4s)
+  + Dortmund_Stuttgart_J._Leweling_takeon_3017907_dos.png (25.6s)
+  + Dortmund_Stuttgart_J._Leweling_takeon_3017907_ppcf.png (8.5s)
+  + Dortmund_Stuttgart_L._Assignon_pass_2796967_dos.png (26.8s)
+  + Dortmund_Stuttgart_L._Assignon_pass_2796967_ppcf.png (8.3s)
+  + Dortmund_Stuttgart_Nico_Schlotterbeck_pass_3095949_dos.png (27.0s)
+  + Dortmund_Stuttgart_Nico_Schlotterbeck_pass_3095949_ppcf.png (8.5s)
+
+DONE: 50 new, 0 skipped, 0 failed (16.5 min)
+[render_top_event_frames] OK in 990.7s
+
+========================================================================
+[render_olise_passes] Render Olise pass map (Bayern_Hamburg)
+  $ python3 test/render_olise_passes.py
+========================================================================
+Olise passes (Bayern_Hamburg): 62
+{'sideways': 22, 'backward': 15, 'diagonal': 15, 'unknown': 6, 'forward': 4}
+Accuracy: 82.3%
+Saved: test/passes_olise_Bayern_Hamburg.png
+[render_olise_passes] OK in 2.0s
+
+========================================================================
+[render_player_passes] Render top-N player pass maps across matches
+  $ python3 test/render_top_player_passes.py
+========================================================================
+Loaded full data: 6,923 rows, ranking: 30 players
+Targets selected: 10
+  J. Leweling               VfB Stuttgart      Dortmund_Stuttgart        (30 passes)
+  Tiago Tomás               VfB Stuttgart      Dortmund_Stuttgart        (26 passes)
+  Luis Díaz                 FC Bayern München  Union_Bayern              (44 passes)
+  Luis Díaz                 FC Bayern München  Frankfurt_Bayern          (43 passes)
+  Luis Díaz                 FC Bayern München  Bayern_Hamburg            (31 passes)
+  A. Schäfer                1. FC Union Berlin Union_Bayern              (23 passes)
+  N. Jackson                FC Bayern München  Bayern_Hamburg            (17 passes)
+  Carney Chukwuemeka        Borussia Dortmund  Dortmund_Stuttgart        (32 passes)
+  M. Beier                  Borussia Dortmund  Dortmund_Stuttgart        (32 passes)
+  A. Stiller                VfB Stuttgart      Dortmund_Stuttgart        (90 passes)
+  + J._Leweling_Dortmund_Stuttgart.png  (30 passes)
+  + Tiago_Tomás_Dortmund_Stuttgart.png  (26 passes)
+  + Luis_Díaz_Union_Bayern.png  (44 passes)
+  + Luis_Díaz_Frankfurt_Bayern.png  (43 passes)
+  + Luis_Díaz_Bayern_Hamburg.png  (31 passes)
+  + A._Schäfer_Union_Bayern.png  (23 passes)
+  + N._Jackson_Bayern_Hamburg.png  (17 passes)
+  + Carney_Chukwuemeka_Dortmund_Stuttgart.png  (32 passes)
+  + M._Beier_Dortmund_Stuttgart.png  (32 passes)
+  + A._Stiller_Dortmund_Stuttgart.png  (90 passes)
+
+DONE: 10 new, 0 skipped, 0 failed (0.1 min)
+[render_player_passes] OK in 7.0s
+
+========================================================================
+[build_summary] Build outputs/SUMMARY.md (master index)
+  $ python3 test/build_summary.py
+========================================================================
+Wrote: outputs/SUMMARY.md
+Total length: 115 lines
+[build_summary] OK in 0.5s
+
+========================================================================
+[collect_media] Copy renders + reports into outputs/ tree
+  $ bash -c mkdir -p outputs/videos outputs/frames outputs/frames/pass_maps outputs/reports && cp -n test/vision_kane_goal5.mp4 outputs/videos/kane_vision.mp4 2>/dev/null || true; cp -n test/ppcf_kane_goal5.mp4 outputs/videos/kane_ppcf.mp4 2>/dev/null || true; cp -n test/dos_kane_goal5.mp4 outputs/videos/kane_dos.mp4 2>/dev/null || true; cp -n test/ppcf_kane_goal5.png outputs/frames/kane_ppcf.png 2>/dev/null || true; for f in test/passes_olise_*.png; do   [ -f "$f" ] && cp -n "$f" outputs/frames/pass_maps/ 2>/dev/null || true; done; for f in test/dos_validation_report*.md; do   [ -f "$f" ] && cp -n "$f" outputs/reports/ 2>/dev/null || true; done; for f in test/dos_validation_*.png; do   [ -f "$f" ] && cp -n "$f" outputs/reports/ 2>/dev/null || true; done; echo 'Collected media into outputs/'
+========================================================================
+Collected media into outputs/
+[collect_media] OK in 0.0s

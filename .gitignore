@@ -15,8 +15,12 @@ references/
 # Pipeline outputs (regenerated on AWS / local runs)
 /outputs/
 
-# Local mirror of AWS run results (caches, videos, frames, tables, reports)
-/aws_results/
+# Local mirror of AWS run results — track everything EXCEPT the cache
+# (cache files are 850-950 MB each, exceed GitHub's 100MB hard limit;
+# they are reproducible from data/hackathon via scripts/aws_pipeline.py
+# step 1). Track tables, frames, videos, reports, intermediate CSVs,
+# Kane goal renders, SUMMARY.md, log + state.
+/aws_results/cache/
 
 # Generated artefacts inside test/ (CSVs, MP4s, PNGs, MD reports, logs).
 # All produced by the metric chain or the render scripts; the canonical
