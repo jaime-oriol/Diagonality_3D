@@ -40,7 +40,9 @@ Pipeline (20 stages):
     render_kane_vision       test/render_kane_goal.py
     render_kane_ppcf_video   test/render_kane_goal_ppcf_video.py
     render_kane_dos_video    test/render_kane_goal_dos_video.py
-    render_top_dos_videos    test/render_top_dos_videos.py
+    render_top_dos_videos    test/render_top_dos_videos.py    (top 10)
+    render_top_vision_videos test/render_top_vision_videos.py (top 8)
+    render_top_ppcf_videos   test/render_top_ppcf_videos.py   (top 8)
   STAGE 5 — FRAME RENDERS
     render_kane_ppcf_png     test/render_kane_goal_ppcf_png.py
     render_top_event_frames  test/render_top_event_frames.py
@@ -289,6 +291,20 @@ def build_pipeline() -> List[Step]:
         command=["python3", "test/render_top_dos_videos.py"],
         outputs=[],   # internal resume; always invoke
         description="Render DOS videos for top-N selected events",
+        skip_if_done=False,
+    ))
+    steps.append(Step(
+        name="render_top_vision_videos",
+        command=["python3", "test/render_top_vision_videos.py"],
+        outputs=[],
+        description="Render Bekkers VISION videos for top-8 selected events",
+        skip_if_done=False,
+    ))
+    steps.append(Step(
+        name="render_top_ppcf_videos",
+        command=["python3", "test/render_top_ppcf_videos.py"],
+        outputs=[],
+        description="Render PPCF reach-field videos for top-8 selected events",
         skip_if_done=False,
     ))
 
