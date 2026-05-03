@@ -16,44 +16,65 @@ Do diagonal actions — passes, carries and off-ball runs — systematically exp
 
 ```
 Diagonality_3D/
-├── docs/                        # Research and data documentation (git-ignored)
-│   ├── propuesta_final.md       # Full project proposal
-│   ├── hackathon_data.md        # Complete data inventory (verified)
-│   ├── diagonality.md           # Spielverlagerung tactical theory
-│   ├── vision_de_paul.md        # Bekkers SSAC 2026 vision model paper
-│   ├── the_diagonalist_manifesto.md  # Hamilton manifesto
-│   └── prompts.md               # Reusable prompts and notes
+├── README.md
+├── requirements.txt                     # Pinned versions for reproducibility
 │
-├── src/                         # Python modules
-│   ├── loader.py                # XML events, metadata, frame mapping
-│   ├── preprocess.py            # Per-match cache extraction
-│   ├── orientation.py           # Head/shoulder/hip orientation + velocity
-│   ├── vision.py                # Vision model (adapted Bekkers)
-│   ├── theta.py                 # Theta per event (passes, carries)
-│   ├── ddef.py                  # D-Def: defensive disruption (Goes et al.)
-│   ├── ppcf.py                  # Immediate Orientation-Aware PPCF (reach fields)
-│   ├── dos.py                   # Diagonal Opportunity Surfaces
-│   ├── possession.py            # Frame-exact possession timeline
-│   ├── scanning.py              # On-ball player FOV + 2.5s scanning memory
-│   └── viz/                     # Visualization package
-│       ├── common.py            # Shared style constants + colormaps
-│       ├── vision_plot.py       # Vision map renderer
-│       ├── ppcf_plot.py         # PPCF reach-field renderer
-│       └── dos_plot.py          # DOS heatmap renderer (FOV gate)
+├── src/                                 # Numpy-pure source modules
+│   ├── loader.py                        # XML events / metadata / take-ons
+│   ├── preprocess.py                    # Per-match cache extraction
+│   ├── orientation.py                   # Head/shoulder/hip + velocity smoothing
+│   ├── vision.py                        # Bekkers vision (FOV + per-occluder occlusion)
+│   ├── theta.py                         # Theta per event (defender + receiver axes)
+│   ├── ddef.py                          # D-Def + Forcher local + PCA
+│   ├── ppcf.py                          # Immediate Orientation-Aware PPCF reach fields
+│   ├── dos.py                           # Diagonal Opportunity Surfaces (3 APIs)
+│   ├── possession.py                    # Frame-exact possession timeline
+│   ├── scanning.py                      # On-ball FOV + 2.5s scanning memory
+│   ├── xt.py                            # Karun Singh xT lookup (vectorized)
+│   ├── data/xt_singh_12x8.npy           # Bundled xT grid
+│   └── viz/                             # Renderers (DOS, PPCF, Vision, Passes)
 │
-├── cache/                       # Git-ignored (preprocessed per match)
-├── data/                        # Git-ignored (~20GB hackathon data)
-├── references/                  # Git-ignored (Bekkers code)
-├── test/                        # Git-ignored — scripts + validation + tests
-│   ├── validate_dos_outcomes.py        # Empirical validation of DOS over 5 matches
-│   ├── fix_carry_possession_link.py    # Post-process: link carries to possessions
-│   ├── test_validate_dos_outcomes.py   # 29 unit + integration tests
-│   ├── test_possession.py, test_scanning.py, test_dos_gate.py
-│   ├── test_integration_real_cache.py  # Against real Bayern_Hamburg cache
-│   ├── regenerate_caches.py            # WSL-safe cache rebuild (PRE_WINDOW=150)
-│   └── render_kane_goal*.py            # Vision / PPCF / DOS video renderers
-└── figures/                     # Pre-rendered outputs
+├── scripts/                             # AWS execution
+│   ├── aws_setup.sh                     # EC2 bootstrap (ffmpeg + miniconda + deps)
+│   └── aws_pipeline.py                  # Master orchestrator (28 steps + resume)
+│
+├── test/                                # Pipeline scripts + unit tests (.py only)
+│   # Metric chain
+│   ├── validate_dos_outcomes.py         # DOS over every event (~6.7k)
+│   ├── fix_carry_possession_link.py     # Carry↔possession link fix
+│   ├── enrich_with_xt.py                # xt_origin / xt_dest / xt_delta
+│   ├── enrich_with_ddef.py              # 14-var state vector + PCA
+│   ├── enrich_with_theta.py             # Defender + receiver theta
+│   ├── enrich_full_metadata.py          # player_id / player_name / team_name
+│   # Stats + aggregations
+│   ├── compute_stats_{xt,ddef,theta}.py # MD reports + plots
+│   ├── aggregate_rankings.py            # 16 storytelling tables
+│   ├── select_top_events.py             # Top-N event picker for renders
+│   ├── build_summary.py                 # outputs/SUMMARY.md
+│   # Renders (parallelized where possible)
+│   ├── render_kane_goal*.py             # Kane goal: vision + PPCF + DOS
+│   ├── render_olise_passes.py           # Olise pass map
+│   ├── render_top_dos_videos.py         # Top-10 DOS videos
+│   ├── render_top_vision_videos.py      # Top-8 vision videos
+│   ├── render_top_ppcf_videos.py        # Top-8 PPCF videos
+│   ├── render_top_event_frames.py       # ~60 PNG gallery
+│   ├── render_top_player_passes.py      # ~20 player pass maps
+│   └── test_*.py                        # 136 tests across 7 files
+│
+├── figures/                             # Tracked logos (Logo.png + logos/)
+├── cache/                               # Git-ignored (preprocessed per match)
+├── data/                                # Git-ignored (raw hackathon ~20 GB)
+├── outputs/                             # Git-ignored (pipeline run artefacts)
+│   ├── tables/                          # Rankings CSV
+│   ├── frames/                          # PNG gallery + pass maps
+│   ├── videos/                          # MP4 renders
+│   ├── reports/                         # Stats reports + plots
+│   ├── SUMMARY.md                       # Master index
+│   └── .pipeline_state.json             # Resume state
+└── docs/                                # Git-ignored (research + narrative)
 ```
+
+All generated artefacts live in `outputs/`. The `test/` folder holds **only Python source**.
 
 ---
 
@@ -71,7 +92,32 @@ The analysis runs as a four-stage pipeline:
 
 **Scanning gate (cognitive layer).** A frame-exact possession timeline (carries + passes linked to receptions via play_id) tells us, at every frame, which player is on-ball. The on-ball player's full Bekkers vision plus a 2.5 s exponentially-decayed scanning memory is used to gate the DOS surface: only cells the player can SEE or has scanned recently are painted. The lookback grows linearly from zero at the moment a new player becomes on-ball, so the receiver never inherits the passer's pre-pass scanning context. The renderer applies a 1.5 m gaussian blur and a temporal EMA across frames (alpha=0.10, ~140 ms half-life) for visual readability, then maps the result onto a fixed display range via a smoothstep visibility curve and spline36 interpolation — no flicker, no on/off cliffs. Requires the cache to be generated with `PRE_WINDOW_FRAMES >= 150` (3 s) so the lookback is fully covered; run `test/regenerate_caches.py` to (re)build it.
 
-**Empirical validation.** `test/validate_dos_outcomes.py` evaluates DOS over every pass and carry of the 5 cached matches (~6.7k events) and cross-tabulates against real outcomes from kpi_data (`evaluation`, `back_line_break`, `bypassed_defenders`, parent possession `sum_xg_ind`). The model receives **no xG, no xT, no success labels** as inputs — only geometry + skeleton orientation + the Bekkers vision model. Carries use a multi-frame DOS path (5 uniformly-spaced samples along the trajectory, instantaneous skeleton velocity direction, virtual destination `pos + vel * 1s`, aggregated with max) because a carry's start→end vector does not represent its real direction. Memory-safe via pyarrow predicate-pushdown chunks (~1.6 GB peak, ~25 min total for the 5 matches). `test/fix_carry_possession_link.py` post-processes the raw CSV to fix a DFL XML quirk where `TeamPossession > PossessionEvent` never lists carry event IDs — the fix links carries to their parent possession by frame-range containment. Outputs: `test/dos_validation_raw_fixed.csv`, `test/dos_validation_quintiles_fixed.png`, `test/dos_validation_report_fixed.md`.
+**Empirical validation chain.** Every per-event metric is computed by a separate enrichment script in `test/`, chained via the master orchestrator `scripts/aws_pipeline.py`:
+
+1. **DOS** — evaluates the Diagonal Opportunity Surface for every pass, carry and take-on of the 5 cached matches (~6.7k events). The model receives **no xG, no xT, no success labels** as inputs — only geometry + skeleton orientation + the Bekkers vision model. Carries use a multi-frame DOS path (5 uniformly-spaced samples, instantaneous skeleton velocity direction, virtual destination `pos + vel * 1s`, aggregated with max). Take-ons use the WinnerPlayer's instantaneous velocity at the duel frame.
+2. **xT-delta** — Karun Singh (2018) per-action value `ΔxT = xT(end) - xT(origin)`. Causal-fair outcome that doesn't dilute carry/take-on signal the way `parent_possession_xg` does.
+3. **D-Def + PCA** — Goes (2019) defensive disruption with Forcher (2024) local extension. 14-var state vector at t0 + at t0+3s, Z-score + PCA cross-dataset → PC1 (longitudinal), PC2 (lateral), PC3 (shape), bi-axial balance.
+4. **Theta orientation** — defender disruption (`mean_theta_shoulder`, `nearest_in_blind`, `n_wrongfooted`) + receiver advantage (`receiver_open_angle`, `receiver_turn_needed`, `n_teammates_in_fov`).
+5. **Player + team metadata** — joins event_id with the official roster (`MatchInformations.xml`) so rankings can be aggregated per player and per team.
+
+Memory-safe throughout (pyarrow predicate-pushdown chunks, ~1.6 GB peak per chunk). All intermediate CSVs live in `test/` (gitignored); final reports + tables + visualisations land in `outputs/`.
+
+---
+
+## Running the full pipeline
+
+The master orchestrator `scripts/aws_pipeline.py` runs every stage end-to-end with full resume support (`outputs/.pipeline_state.json`):
+
+```bash
+# On AWS EC2 (after scripts/aws_setup.sh has bootstrapped conda + ffmpeg + deps):
+python3 scripts/aws_pipeline.py --list                # Show plan + per-step state
+python3 scripts/aws_pipeline.py                       # Run / resume
+python3 scripts/aws_pipeline.py --from STEP_NAME      # Restart from a step
+python3 scripts/aws_pipeline.py --only STEP1 STEP2    # Run only specific steps
+python3 scripts/aws_pipeline.py --force               # Rerun everything
+```
+
+The orchestrator runs 28 steps in 7 stages: cache regeneration × 5 matches → metric chain (validate → fix → xt → ddef → theta) → stats reports → metadata + rankings → video renders (Kane goal × 3 + top-10 DOS + top-8 vision + top-8 PPCF, parallelized) → frame gallery + pass maps → master `SUMMARY.md`. End-to-end wall time on an AWS `c5.9xlarge` (36 vCPU, 72 GB RAM): ~3-5 hours.
 
 ---
 

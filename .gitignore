@@ -15,6 +15,15 @@ references/
 # Pipeline outputs (regenerated on AWS / local runs)
 /outputs/
 
+# Generated artefacts inside test/ (CSVs, MP4s, PNGs, MD reports, logs).
+# All produced by the metric chain or the render scripts; the canonical
+# location for these is outputs/. Only .py files belong in test/.
+test/*.csv
+test/*.mp4
+test/*.png
+test/*.md
+test/*.log
+
 # Python
 __pycache__/
 *.pyc
@@ -33,11 +42,12 @@ catboost_info/
 .env
 *.env
 
-# IDE / agent state
+# IDE / agent state (private to local dev — never tracked)
 .vscode/
 .idea/
 .claude/
 .pytest_cache/
+CLAUDE.md
 
 # OS
 .DS_Store
