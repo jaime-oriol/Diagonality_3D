@@ -30,8 +30,11 @@ sudo dnf -y update >/dev/null
 sudo dnf -y install \
     git \
     gcc gcc-c++ make \
-    bzip2 wget curl tar xz \
+    bzip2 wget tar xz \
     >/dev/null
+# Note: curl is intentionally omitted — Amazon Linux 2023 ships
+# 'curl-minimal' which already provides the curl binary. Asking for
+# 'curl' triggers a package conflict (curl vs curl-minimal).
 
 if ! command -v ffmpeg >/dev/null 2>&1; then
     log "  installing static ffmpeg from BtbN/FFmpeg-Builds"
@@ -58,6 +61,10 @@ fi
 source "$MINICONDA/etc/profile.d/conda.sh"
 
 log "3/5 — conda env '$CONDA_ENV' (python $PY_VERSION)"
+# Newer conda versions (>=25) require explicit TOS acceptance for the
+# default Anaconda channels. Accept silently — non-interactive run.
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main >/dev/null 2>&1 || true
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r >/dev/null 2>&1 || true
 if ! conda env list | grep -qE "^\s*${CONDA_ENV}\s"; then
     conda create -y -n "$CONDA_ENV" "python=$PY_VERSION" pip >/dev/null
 fi
