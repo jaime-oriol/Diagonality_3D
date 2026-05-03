@@ -1,8 +1,8 @@
 """
 passes_plot — Player-pass visualization in our brand style.
 
-Inspired by the Opta Analyst player-pass figure (figures/Messi_pases.jpg)
-but adapted to the project's dark theme + the Diagonality-3D narrative:
+Inspired by the Opta Analyst player-pass figure but adapted to the
+project's dark theme + the Diagonality-3D narrative:
 
   - Pass arrows colored by **direction class** (gold = diagonal, the SV
     signature) instead of just success.
@@ -205,8 +205,7 @@ def _draw_header(
         try:
             img = plt.imread(project_logo_path)
             # Auto-zoom so the rendered logo has the same visual height
-            # regardless of the source PNG resolution. Target ≈ 48 px tall
-            # (the size that matched the previous Logo_vizs.png at zoom=0.08).
+            # regardless of the source PNG resolution. Target ≈ 48 px tall.
             TARGET_HEIGHT_PX = 48
             zoom = TARGET_HEIGHT_PX / float(img.shape[0])
             ab = AnnotationBbox(

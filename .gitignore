@@ -4,11 +4,16 @@ docs/
 # External references
 references/
 
-# Data (hackathon data ~20GB, DO NOT UPLOAD per hackathon rules)
-data/
+# Hackathon data (~20GB, DO NOT UPLOAD per hackathon rules) — anchored
+# to repo root with leading slash so src/data/ (the bundled xT grid)
+# stays tracked. Otherwise plain "data/" matches any data dir anywhere.
+/data/
 
-# Cache
-cache/
+# Cache (only root-level cache/, never src/cache or test/cache)
+/cache/
+
+# Pipeline outputs (regenerated on AWS / local runs)
+/outputs/
 
 # Python
 __pycache__/
@@ -28,20 +33,20 @@ catboost_info/
 .env
 *.env
 
-# IDE
+# IDE / agent state
 .vscode/
 .idea/
+.claude/
+.pytest_cache/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Models and outputs
+# Models
 *.pkl
 *.joblib
 models/
-outputs/
-
 
 # Figures (tracked selectively)
 figures/*.mp4
