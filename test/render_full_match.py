@@ -438,9 +438,9 @@ def _concat_segments(segment_paths: list, final_out: Path):
     (no re-encode, instant). All segments must share codec params, which
     they do because they were all produced with identical FuncAnimation
     + ffmpeg writer settings here."""
+    final_out.parent.mkdir(parents=True, exist_ok=True)
     list_file = final_out.parent / f"{final_out.stem}_concat_list.txt"
     list_file.write_text("\n".join(f"file '{Path(p).resolve()}'" for p in segment_paths))
-    final_out.parent.mkdir(parents=True, exist_ok=True)
     cmd = ["ffmpeg", "-y", "-f", "concat", "-safe", "0",
            "-i", str(list_file), "-c", "copy", str(final_out)]
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -462,6 +462,12 @@ def main():
                     help="Number of parallel workers (default = cpu_count)")
     ap.add_argument("--out-dir", default="outputs/full_match",
                     help="Output directory for the final video")
+    ap.add_argument("--limit-frames", type=int, default=None,
+                    help="Smoke test: only render the first N frames of the match")
+    ap.add_argument("--seg-frames", type=int, default=1500,
+                    help="Max frames per segment (caps ffmpeg memory; "
+                         "ffmpeg buffers RGBA frames in pipe ~1MB/frame, "
+                         "so 1500 → ~1.5 GB per worker). Default: 1500.")
     args = ap.parse_args()
 
     if args.type == "vision" and not args.focus_player:
@@ -471,6 +477,8 @@ def main():
 
     # Determine full frame range from cache
     f_min, f_max = _all_match_frames(args.match)
+    if args.limit_frames:
+        f_max = min(f_max, f_min + args.limit_frames - 1)
     total_frames = f_max - f_min + 1
     print(f"Match: {args.match}")
     print(f"Frame range: {f_min} - {f_max} ({total_frames:,} potential frames)")
@@ -478,16 +486,20 @@ def main():
           (f" (focus: {args.focus_player})" if args.type == "vision" else ""))
     print(f"Workers: {n_workers}")
 
-    # Split frame range into N segments
-    seg_size = total_frames // n_workers + 1
+    # Split frame range into many small segments (cap by --seg-frames so
+    # each ffmpeg subprocess stays bounded; otherwise ffmpeg buffers RGBA
+    # frames in pipe and a 5000-frame segment grows to ~5 GB → OOM with
+    # 72 workers). Workers consume the queue, so n_segments can far
+    # exceed n_workers.
+    seg_size = max(1, min(args.seg_frames, total_frames))
     segments = []
-    for i in range(n_workers):
-        s = f_min + i * seg_size
-        e = min(f_max, f_min + (i + 1) * seg_size - 1)
-        if s > f_max:
-            break
+    s = f_min
+    while s <= f_max:
+        e = min(f_max, s + seg_size - 1)
         segments.append((s, e))
-    print(f"Segments: {len(segments)} of ~{seg_size} frames each")
+        s = e + 1
+    print(f"Segments: {len(segments)} of ~{seg_size} frames each "
+          f"(workers consume from queue)")
 
     # Output paths
     label = args.type
