@@ -85,7 +85,7 @@ def main():
         title="Michael Olise Passes",
         subtitle=SUBTITLE,
         attacking_right=True,
-        team_logo_path="figures/logos/bayern.png",
+        team_logo_path="figures/logos/bayern_munich.png",
         project_logo_path="figures/Logo.png",
         save_path=out,
     )

@@ -53,16 +53,32 @@ def _classify_dfl(angle_deg: float) -> str:
     return "backward"
 
 
+# Explicit team_name → logo filename mapping. The team_name we see in the
+# enriched CSV comes straight from MatchInformations.xml LongName, so we
+# whitelist exactly those values. Logos are sourced from the
+# luukhopman/football-logos GitHub repo (Bundesliga folder), all 139x181
+# RGBA PNGs with transparent background — drop-in compatible with the
+# top-right project logo placement in src/viz/passes_plot.py.
+TEAM_LOGO_FILES = {
+    "FC Bayern München":   "bayern_munich.png",
+    "Bayern Munich":       "bayern_munich.png",     # alt spelling, just in case
+    "Hamburger SV":        "hamburger_sv.png",
+    "Borussia Dortmund":   "borussia_dortmund.png",
+    "VfB Stuttgart":       "vfb_stuttgart.png",
+    "Eintracht Frankfurt": "eintracht_frankfurt.png",
+    "1. FC Union Berlin":  "1fc_union_berlin.png",
+}
+
+
 def _team_logo_path(team_name: str) -> str:
     """Map a team name to its logo PNG (if present)."""
-    name = team_name.lower().split()[0] if team_name else ""
-    candidates = [
-        f"figures/logos/{name}.png",
-        f"figures/logos/{name.replace('.', '')}.png",
-    ]
-    for p in candidates:
-        if Path(p).exists():
-            return p
+    if not team_name:
+        return ""
+    fname = TEAM_LOGO_FILES.get(team_name.strip())
+    if fname:
+        p = Path("figures/logos") / fname
+        if p.exists():
+            return str(p)
     return ""  # plot_player_passes handles empty paths gracefully
 
 
