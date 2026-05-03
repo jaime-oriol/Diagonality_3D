@@ -47,7 +47,6 @@ catboost_info/
 .idea/
 .claude/
 .pytest_cache/
-CLAUDE.md
 
 # OS
 .DS_Store
