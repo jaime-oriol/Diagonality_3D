@@ -146,14 +146,52 @@ def _select_targets(df: pd.DataFrame, ranking: pd.DataFrame) -> list:
     return selected
 
 
+# Storytelling-friendly short team names for the subtitle line.
+# DFL LongName is verbose ("FC Bayern München", "1. FC Union Berlin"); we
+# anglicize / shorten to match the Opta-style hardcoded subtitle in
+# render_olise_passes.py.
+NICE_TEAM_NAME = {
+    "FC Bayern München":   "Bayern Munich",
+    "Hamburger SV":        "Hamburger SV",
+    "Borussia Dortmund":   "Borussia Dortmund",
+    "VfB Stuttgart":       "VfB Stuttgart",
+    "Eintracht Frankfurt": "Eintracht Frankfurt",
+    "1. FC Union Berlin":  "Union Berlin",
+}
+
+
 def _match_subtitle(match: str, info: dict) -> list:
-    """Pretty subtitle e.g. ['Bundesliga 2025-26',
-    'Bayern Munich 5-0 Hamburger SV (13 September 2025)']."""
-    title = info.get("match_title", "")
-    return [
-        "Bundesliga 2025-26",
-        title if title else match.replace("_", " vs "),
-    ]
+    """Build the 2-line subtitle in the Opta style:
+        ['Bundesliga 2025-26',
+         '{home} {hg}-{ag} {away} ({DD Month YYYY})']
+
+    Reads home/away names from MatchInformations.xml LongName (mapped via
+    NICE_TEAM_NAME for storytelling), score from Result ('h:a' format),
+    date from cache metadata.json Kickoff ('YYYY-MM-DD HH:MM:SS')."""
+    from datetime import datetime
+    from src.preprocess import load_cached_metadata
+
+    home = NICE_TEAM_NAME.get(info.get("home_team_name", ""), info.get("home_team_name", ""))
+    away = NICE_TEAM_NAME.get(info.get("away_team_name", ""), info.get("away_team_name", ""))
+    result = (info.get("result", "") or "").replace(":", "-")
+
+    date_str = ""
+    try:
+        kickoff = load_cached_metadata(match).get("kickoff", "")
+        if kickoff:
+            dt = datetime.fromisoformat(kickoff.replace(" ", "T")[:19])
+            date_str = dt.strftime("%-d %B %Y")  # e.g. "13 September 2025"
+    except Exception:
+        pass
+
+    if home and away and result:
+        line2 = f"{home} {result} {away}"
+        if date_str:
+            line2 += f" ({date_str})"
+    else:
+        line2 = match.replace("_", " vs ")
+
+    return ["Bundesliga 2025-26", line2]
 
 
 def main():
