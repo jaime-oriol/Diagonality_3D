@@ -9,12 +9,12 @@ This is Spielverlagerung's claim "a diagonal pass breaks both the
 horizontal AND the vertical line at once" turned into a quantifiable
 test using Goes et al. 2019 D-Def with the Forcher 2024 local extension.
 
-Inputs: `test/dos_validation_raw_xt_ddef.csv` produced by
-`test/enrich_with_ddef.py`.
+Inputs: `outputs/intermediate/dos_validation_raw_xt_ddef.csv` produced by
+`pipeline/enrich_with_ddef.py`.
 
 Outputs:
-  - test/dos_validation_report_ddef.md
-  - test/dos_validation_ddef_axes.png  (per-class |PC1| vs |PC2| scatter
+  - outputs/intermediate/dos_validation_report_ddef.md
+  - outputs/intermediate/dos_validation_ddef_axes.png  (per-class |PC1| vs |PC2| scatter
     with marginal means + bi-axial isolines)
 """
 
@@ -33,9 +33,10 @@ from scipy.stats import mannwhitneyu, spearmanr, kruskal
 import statsmodels.api as sm
 
 
-RAW_DDEF = Path("test/dos_validation_raw_xt_ddef.csv")
-OUT_PNG = Path("test/dos_validation_ddef_axes.png")
-OUT_MD = Path("test/dos_validation_report_ddef.md")
+RAW_DDEF = Path("outputs/intermediate/dos_validation_raw_xt_ddef.csv")
+OUT_PNG = Path("outputs/intermediate/dos_validation_ddef_axes.png")
+OUT_MD = Path("outputs/intermediate/dos_validation_report_ddef.md")
+OUT_MD.parent.mkdir(parents=True, exist_ok=True)
 
 # Window suffix used by enrich_with_ddef
 W = "3s"

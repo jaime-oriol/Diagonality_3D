@@ -1,5 +1,5 @@
 """Fix the carry / take-on → possession.sum_xg_ind link in
-`test/dos_validation_raw.csv`.
+`outputs/intermediate/dos_validation_raw.csv`.
 
 Why this exists:
   The DFL kpi_data XML `TeamPossession > PossessionEvent` lists only the
@@ -19,9 +19,9 @@ Fix (works for ANY event_type, takes only team_id + parquet_frame as input):
          whose ids DO appear in the possession's event_ids list.
 
 Produces:
-  test/dos_validation_raw_fixed.csv      (same rows + corrected xg column)
-  test/dos_validation_report_fixed.md    (full report recomputed on fixed data)
-  test/dos_validation_quintiles_fixed.png
+  outputs/intermediate/dos_validation_raw_fixed.csv      (same rows + corrected xg column)
+  outputs/intermediate/dos_validation_report_fixed.md    (full report recomputed on fixed data)
+  outputs/intermediate/dos_validation_quintiles_fixed.png
 """
 
 import sys
@@ -35,10 +35,11 @@ import pandas as pd
 from src.loader import MATCHES
 from src.preprocess import CACHE_DIR
 
-RAW = Path("test/dos_validation_raw.csv")
-OUT_RAW = Path("test/dos_validation_raw_fixed.csv")
-OUT_REPORT = Path("test/dos_validation_report_fixed.md")
-OUT_PNG = Path("test/dos_validation_quintiles_fixed.png")
+RAW = Path("outputs/intermediate/dos_validation_raw.csv")
+OUT_RAW = Path("outputs/intermediate/dos_validation_raw_fixed.csv")
+OUT_REPORT = Path("outputs/intermediate/dos_validation_report_fixed.md")
+OUT_PNG = Path("outputs/intermediate/dos_validation_quintiles_fixed.png")
+OUT_RAW.parent.mkdir(parents=True, exist_ok=True)
 
 
 def _build_possession_intervals(match: str) -> pd.DataFrame:

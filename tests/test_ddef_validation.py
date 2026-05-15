@@ -1,5 +1,5 @@
-"""Unit tests for the D-Def validation pipeline (test/enrich_with_ddef.py
-+ test/compute_stats_ddef.py).
+"""Unit tests for the D-Def validation pipeline (pipeline/enrich_with_ddef.py
++ pipeline/compute_stats_ddef.py).
 
 Covers:
   - GK jersey lookup per match (real cache)
@@ -12,20 +12,20 @@ Covers:
 
 import sys
 sys.path.insert(0, ".")
-sys.path.insert(0, "test")
 
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
 
-# Compute the import path
+# Load the pipeline scripts under test by explicit file path.
 import importlib.util as _iu
+_PIPELINE = Path(__file__).resolve().parent.parent / "pipeline"
 spec_e = _iu.spec_from_file_location(
-    "enrich_with_ddef", Path("test/enrich_with_ddef.py"))
+    "enrich_with_ddef", _PIPELINE / "enrich_with_ddef.py")
 enr = _iu.module_from_spec(spec_e); spec_e.loader.exec_module(enr)
 spec_s = _iu.spec_from_file_location(
-    "compute_stats_ddef", Path("test/compute_stats_ddef.py"))
+    "compute_stats_ddef", _PIPELINE / "compute_stats_ddef.py")
 sts = _iu.module_from_spec(spec_s); spec_s.loader.exec_module(sts)
 
 
@@ -152,10 +152,10 @@ def test_logistic_biaxial_skips_for_small_n():
 # ── Integration with real ddef-enriched CSV ───────────────────────────
 
 @pytest.mark.skipif(
-    not Path("test/dos_validation_raw_xt_ddef.csv").exists(),
+    not Path("outputs/intermediate/dos_validation_raw_xt_ddef.csv").exists(),
     reason="ddef-enriched CSV not yet generated")
 def test_integration_real_ddef_csv():
-    df = pd.read_csv("test/dos_validation_raw_xt_ddef.csv")
+    df = pd.read_csv("outputs/intermediate/dos_validation_raw_xt_ddef.csv")
     assert "pc1_3s" in df.columns and "pc2_3s" in df.columns
     assert df["pc1_3s"].notna().sum() > 1000
     df["biaxial"] = sts._bi_axial_balance(df, "3s")

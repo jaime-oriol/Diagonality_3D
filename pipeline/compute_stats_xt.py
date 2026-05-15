@@ -11,8 +11,8 @@ Per event-type the outcome is:
   - takeon: xt_origin (xT of the duel zone — value preserved)
 
 Outputs:
-  test/dos_validation_quintiles_xt.png
-  test/dos_validation_report_xt.md
+  outputs/intermediate/dos_validation_quintiles_xt.png
+  outputs/intermediate/dos_validation_report_xt.md
 """
 
 import sys
@@ -29,9 +29,10 @@ from scipy.stats import mannwhitneyu, pearsonr, spearmanr
 import statsmodels.api as sm
 
 
-RAW_XT = Path("test/dos_validation_raw_xt.csv")
-OUT_PNG = Path("test/dos_validation_quintiles_xt.png")
-OUT_MD = Path("test/dos_validation_report_xt.md")
+RAW_XT = Path("outputs/intermediate/dos_validation_raw_xt.csv")
+OUT_PNG = Path("outputs/intermediate/dos_validation_quintiles_xt.png")
+OUT_MD = Path("outputs/intermediate/dos_validation_report_xt.md")
+OUT_MD.parent.mkdir(parents=True, exist_ok=True)
 
 
 def _outcome(df: pd.DataFrame) -> pd.Series:

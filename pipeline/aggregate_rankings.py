@@ -29,7 +29,7 @@ import numpy as np
 import pandas as pd
 
 
-RAW = Path("test/dos_validation_full.csv")
+RAW = Path("outputs/intermediate/dos_validation_full.csv")
 OUT_DIR = Path("outputs/tables")
 
 MIN_EVENTS_PLAYER = 30   # min n events to qualify a player for rankings

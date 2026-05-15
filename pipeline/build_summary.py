@@ -210,8 +210,8 @@ def main():
     # ── Build the markdown ──────────────────────────────────────────
     md = []
     md.append("# Diagonality 3D — AWS pipeline summary\n")
-    md.append("Single-page index of every artefact produced by "
-              "`scripts/aws_pipeline.py`. All numbers reproducible "
+    md.append("Single-page index of every artefact produced by the "
+              "`pipeline/` scripts. All numbers reproducible "
               "from the cached event-level CSV `dos_validation_full.csv`.\n")
 
     md.append("\n## Headline cifras (storytelling)\n")

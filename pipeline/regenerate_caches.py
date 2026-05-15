@@ -22,8 +22,8 @@ What this script does (in order, per match):
 
 USAGE:
     source ~/anaconda3/bin/activate base
-    python3 test/regenerate_caches.py            # all 5 matches
-    python3 test/regenerate_caches.py Bayern_Hamburg Frankfurt_Bayern  # subset
+    python3 pipeline/regenerate_caches.py            # all 5 matches
+    python3 pipeline/regenerate_caches.py Bayern_Hamburg Frankfurt_Bayern  # subset
 
 Memory model: each match is preprocessed in isolation. The skeleton
 streaming inside preprocess._extract_skeleton_batch already releases

@@ -21,8 +21,8 @@ Plus Mann-Whitney U tests so each cifra has a p-value attached for
 defense against a sceptical reviewer.
 
 Output:
-  test/dos_validation_report_theta.md
-  test/dos_validation_theta_axes.png
+  outputs/intermediate/dos_validation_report_theta.md
+  outputs/intermediate/dos_validation_theta_axes.png
 """
 
 import sys
@@ -38,9 +38,10 @@ import matplotlib.pyplot as plt
 from scipy.stats import mannwhitneyu
 
 
-RAW = Path("test/dos_validation_raw_xt_ddef_theta.csv")
-OUT_PNG = Path("test/dos_validation_theta_axes.png")
-OUT_MD = Path("test/dos_validation_report_theta.md")
+RAW = Path("outputs/intermediate/dos_validation_raw_xt_ddef_theta.csv")
+OUT_PNG = Path("outputs/intermediate/dos_validation_theta_axes.png")
+OUT_MD = Path("outputs/intermediate/dos_validation_report_theta.md")
+OUT_MD.parent.mkdir(parents=True, exist_ok=True)
 
 
 def _fmt_p(p):

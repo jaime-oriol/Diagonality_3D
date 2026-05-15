@@ -11,10 +11,10 @@ worker), then concatenates the segment .mp4s with ffmpeg's concat demuxer
 without re-encoding (`-c copy`).
 
 Usage:
-  python3 test/render_full_match.py --match Bayern_Hamburg --type dos
-  python3 test/render_full_match.py --match Bayern_Hamburg --type ppcf
-  python3 test/render_full_match.py --match Bayern_Hamburg --type vision --focus-player DFL-OBJ-J00ZZ3
-  python3 test/render_full_match.py --match Frankfurt_Bayern --type vision --focus-player DFL-OBJ-J01R3R
+  python3 renders/render_full_match.py --match Bayern_Hamburg --type dos
+  python3 renders/render_full_match.py --match Bayern_Hamburg --type ppcf
+  python3 renders/render_full_match.py --match Bayern_Hamburg --type vision --focus-player DFL-OBJ-J00ZZ3
+  python3 renders/render_full_match.py --match Frankfurt_Bayern --type vision --focus-player DFL-OBJ-J01R3R
 
 Output (configurable via --out-dir, default outputs/full_match/):
   outputs/full_match/{match}_{type}[_focus-{player}].mp4

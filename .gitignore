@@ -14,19 +14,9 @@ docs/
 
 # Local mirror of AWS run results — track everything EXCEPT the cache
 # (cache files are 850-950 MB each, exceed GitHub's 100MB hard limit;
-# they are reproducible from data/hackathon via scripts/aws_pipeline.py
-# step 1). Track tables, frames, videos, reports, intermediate CSVs,
-# Kane goal renders, SUMMARY.md, log + state.
+# they are reproducible from data/hackathon via pipeline/regenerate_caches.py).
+# Track tables, frames, videos, reports, intermediate CSVs and SUMMARY.md.
 /aws_results/cache/
-
-# Generated artefacts inside test/ (CSVs, MP4s, PNGs, MD reports, logs).
-# All produced by the metric chain or the render scripts; the canonical
-# location for these is outputs/. Only .py files belong in test/.
-test/*.csv
-test/*.mp4
-test/*.png
-test/*.md
-test/*.log
 
 # Python
 __pycache__/

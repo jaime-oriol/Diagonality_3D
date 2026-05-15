@@ -1,4 +1,4 @@
-"""Unit tests for test/validate_dos_outcomes.py.
+"""Unit tests for pipeline/validate_dos_outcomes.py.
 
 Covers:
   - chunk splitter (frame-span + event-count caps)
@@ -26,7 +26,7 @@ import pytest
 import importlib.util
 _SPEC = importlib.util.spec_from_file_location(
     "validate_dos_outcomes",
-    Path(__file__).parent / "validate_dos_outcomes.py",
+    Path(__file__).resolve().parent.parent / "pipeline" / "validate_dos_outcomes.py",
 )
 v = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(v)

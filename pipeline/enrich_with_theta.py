@@ -19,7 +19,7 @@ abstractions.
 Memory model: identical to enrich_with_ddef.py — chunked by frame range
 via pyarrow predicate pushdown. Peak ~1.6 GB per chunk.
 
-Output: `test/dos_validation_raw_xt_ddef_theta.csv` (input + ~17 cols).
+Output: `outputs/intermediate/dos_validation_raw_xt_ddef_theta.csv` (input + ~17 cols).
 """
 
 import sys
@@ -36,15 +36,14 @@ from src.theta import compute_pass_theta, compute_carry_theta
 from src.loader import load_takeons
 from src.preprocess import load_cached_events
 from src.orientation import compute_orientations, add_dynamics
-
-sys.path.insert(0, "test")
-from validate_dos_outcomes import (        # noqa: E402
+from src.skeleton_chunks import (
     _read_skeleton_window, _smooth_velocities,
     DEFAULT_MAX_FRAME_SPAN, DEFAULT_MAX_CHUNK_EVENTS,
 )
 
-RAW_IN = Path("test/dos_validation_raw_xt_ddef.csv")
-OUT = Path("test/dos_validation_raw_xt_ddef_theta.csv")
+RAW_IN = Path("outputs/intermediate/dos_validation_raw_xt_ddef.csv")
+OUT = Path("outputs/intermediate/dos_validation_raw_xt_ddef_theta.csv")
+OUT.parent.mkdir(parents=True, exist_ok=True)
 
 FRAME_PAD = 25  # for velocity smoothing
 

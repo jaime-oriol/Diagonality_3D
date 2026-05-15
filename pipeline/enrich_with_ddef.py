@@ -43,16 +43,14 @@ from src.ddef import (
 from src.loader import load_match_info, MATCHES, compute_attacking_right
 from src.preprocess import CACHE_DIR
 from src.orientation import compute_orientations, add_dynamics
-
-# Reuse memory-safe primitives from validate_dos_outcomes.py
-sys.path.insert(0, "test")
-from validate_dos_outcomes import (        # noqa: E402
+from src.skeleton_chunks import (
     _read_skeleton_window, _smooth_velocities,
     DEFAULT_MAX_FRAME_SPAN, DEFAULT_MAX_CHUNK_EVENTS,
 )
 
-RAW_XT = Path("test/dos_validation_raw_xt.csv")
-OUT = Path("test/dos_validation_raw_xt_ddef.csv")
+RAW_XT = Path("outputs/intermediate/dos_validation_raw_xt.csv")
+OUT = Path("outputs/intermediate/dos_validation_raw_xt_ddef.csv")
+OUT.parent.mkdir(parents=True, exist_ok=True)
 
 # D-def needs frames at event_frame AND event_frame + 150 (3s window).
 # Skeleton load buffer must cover that + a Savitzky-Golay margin.

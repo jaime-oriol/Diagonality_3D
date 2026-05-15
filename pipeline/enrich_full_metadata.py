@@ -11,7 +11,7 @@ the DOS computation). For the rankings/narrative we need:
   - player_position (TW/IVR/...) from MatchInformations.xml
   - team_name      (LongName)    from MatchInformations.xml
 
-Output: `test/dos_validation_full.csv` (input + 5 columns).
+Output: `outputs/intermediate/dos_validation_full.csv` (input + 5 columns).
 
 This is the canonical input for `aggregate_rankings.py`,
 `select_top_events.py`, and the parameterized renders.
@@ -28,8 +28,9 @@ import pandas as pd
 from src.loader import load_match_info, load_takeons
 from src.preprocess import load_cached_events
 
-RAW_IN = Path("test/dos_validation_raw_xt_ddef_theta.csv")
-OUT = Path("test/dos_validation_full.csv")
+RAW_IN = Path("outputs/intermediate/dos_validation_raw_xt_ddef_theta.csv")
+OUT = Path("outputs/intermediate/dos_validation_full.csv")
+OUT.parent.mkdir(parents=True, exist_ok=True)
 
 
 def _build_event_to_player(match: str) -> dict:

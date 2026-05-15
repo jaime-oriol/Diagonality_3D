@@ -1,8 +1,8 @@
 """Pick the top-N events for video / frame rendering, save to JSON.
 
 Used by:
-  - test/render_top_dos_videos.py
-  - test/render_top_event_frames.py
+  - renders/render_top_dos_videos.py
+  - renders/render_top_event_frames.py
 
 Selection strategy: a composite score that combines DOS magnitude with
 real-world impact (xT-delta and back_line_break) so we don't pick events
@@ -33,7 +33,7 @@ import numpy as np
 import pandas as pd
 
 
-RAW = Path("test/dos_validation_full.csv")
+RAW = Path("outputs/intermediate/dos_validation_full.csv")
 OUT_DIR = Path("outputs/tables")
 
 # Tuneables

@@ -30,7 +30,7 @@ from src.preprocess import load_cached_events, load_cached_metadata
 from src.viz.passes_plot import plot_player_passes
 
 
-RAW = Path("test/dos_validation_full.csv")
+RAW = Path("outputs/intermediate/dos_validation_full.csv")
 RANK = Path("outputs/tables/players_by_dos.csv")
 OUT_DIR = Path("outputs/frames/pass_maps")
 
@@ -83,9 +83,9 @@ def _team_logo_path(team_name: str) -> str:
 
 
 def _build_player_passes(match: str, player_id: str) -> pd.DataFrame:
-    """Reproduce the same coordinate normalisation as render_olise_passes:
-    flip x and y in halves where the player attacked LEFT so the rendered
-    map always reads as if the player attacked RIGHT."""
+    """Coordinate normalisation: flip x and y in halves where the player
+    attacked LEFT so the rendered map always reads as if the player
+    attacked RIGHT."""
     info = load_match_info(match)
     home_team_id = info.get("home_team_id", "")
     home_gk_left_p1 = bool(load_cached_metadata(match)["home_gk_left"][1])
@@ -148,8 +148,7 @@ def _select_targets(df: pd.DataFrame, ranking: pd.DataFrame) -> list:
 
 # Storytelling-friendly short team names for the subtitle line.
 # DFL LongName is verbose ("FC Bayern München", "1. FC Union Berlin"); we
-# anglicize / shorten to match the Opta-style hardcoded subtitle in
-# render_olise_passes.py.
+# anglicize / shorten them for the Opta-style subtitle.
 NICE_TEAM_NAME = {
     "FC Bayern München":   "Bayern Munich",
     "Hamburger SV":        "Hamburger SV",

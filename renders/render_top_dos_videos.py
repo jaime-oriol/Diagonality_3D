@@ -1,6 +1,6 @@
 """Render DOS videos for the top events selected by `select_top_events.py`.
 
-Reuses the exact pipeline of `render_kane_goal_dos_video.py`:
+DOS + scanning-gate render pipeline:
   - skeleton + ball window around event_frame
   - orientations + add_dynamics + Savitzky-Golay velocity smoothing
   - possession timeline (built from kpi_data)
@@ -13,9 +13,8 @@ Per-event window: WINDOW_PRE seconds before event, WINDOW_POST seconds
 after — same as the Kane render. Output is named after the event so the
 video filename itself carries the metadata for the storytelling slides.
 
-Resume logic: any video that already exists on disk is skipped (the
-master pipeline `scripts/aws_pipeline.py` orchestrates this; running
-this script alone also benefits from the per-file skip).
+Resume logic: any video that already exists on disk is skipped, so the
+script is safe to re-run after a partial render.
 """
 
 import sys

@@ -19,8 +19,8 @@ This script joins every event in raw_fixed.csv against:
   - `loader.load_takeons(match)` for take-ons (origin only)
 
 It then computes `xt_origin`, `xt_dest`, `xt_delta` and writes the
-enriched CSV at `test/dos_validation_raw_xt.csv`. Stats are recomputed
-by `test/compute_stats_xt.py`.
+enriched CSV at `outputs/intermediate/dos_validation_raw_xt.csv`. Stats are recomputed
+by `pipeline/compute_stats_xt.py`.
 """
 
 import sys
@@ -37,8 +37,9 @@ from src.xt import xt_at_tracab, xt_delta as xt_delta_fn
 
 # ── Paths ──────────────────────────────────────────────────────────────
 
-RAW_FIXED = Path("test/dos_validation_raw_fixed.csv")
-RAW_XT_OUT = Path("test/dos_validation_raw_xt.csv")
+RAW_FIXED = Path("outputs/intermediate/dos_validation_raw_fixed.csv")
+RAW_XT_OUT = Path("outputs/intermediate/dos_validation_raw_xt.csv")
+RAW_XT_OUT.parent.mkdir(parents=True, exist_ok=True)
 
 
 # ── Per-match coordinate lookup ────────────────────────────────────────
