@@ -1,9 +1,6 @@
 # Docs (research, not tracked in hackathon repo)
 docs/
 
-# External references
-references/
-
 # Hackathon data (~20GB, DO NOT UPLOAD per hackathon rules) — anchored
 # to repo root with leading slash so src/data/ (the bundled xT grid)
 # stays tracked. Otherwise plain "data/" matches any data dir anywhere.
