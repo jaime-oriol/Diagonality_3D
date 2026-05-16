@@ -193,8 +193,6 @@ def test_display_max_saturates():
         plt.close(fig)
 
 
-# ── Partial gating ─────────────────────────────────────────────────────
-
 # ── Forward-cone mask helper ────────────────────────────────────────────
 
 def test_forward_cone_mask_attacking_right():
@@ -413,6 +411,8 @@ def test_shadow_layer_saturates_at_display_max():
     finally:
         plt.close(fig)
 
+
+# ── Partial gating ──────────────────────────────────────────────────────
 
 def test_partial_memory_partial_paint():
     fo = _orientations_frame()
