@@ -218,7 +218,22 @@ Aggregated over all actions and binned by pitch zone, Figure 8 is the framework'
 
 The same aggregation, computed per opponent rather than over the whole sample, becomes a scouting instrument: a picture of where a specific team's defenders habitually turn away from danger, and therefore where to attack them diagonally.
 
-**A sanity check — the Messi test.** Computed per player, the same aggregation is a way to test DOS itself. Football analytics has an informal rule of thumb, the *Messi test*: a metric that claims to capture a footballing quality must rank the players the eye already knows for that quality, or it is measuring something else. DOS passes it, and it passes it for the reason the tactical theory predicts. Spielverlagerung is explicit that diagonality is not a one-off action but a disposition — "a preference", "a cultivated bias against straight-line orthodoxy", diagonality "as a way of life". A player who has internalised that bias does not play one good diagonal; he accumulates them, because he keeps choosing the oblique option over the straight one. The right way to score that player is therefore not the average but the *total* — the diagonal opportunity he generates summed over every pass, carry and take-on he plays. Ranked that way across the five matches, the leaderboard is headed by Bayern Munich's creative spine: Joshua Kimmich, then Michael Olise, then Konrad Laimer, Aleksandar Pavlović and Luis Díaz — exactly the players a coach would name as the engines of their team's progression. The per-action ranking tells the mirror-image story: a centre-back and a goalkeeper sit at its foot. A surface built only from skeleton geometry, with no notion of reputation, recovers the game's own hierarchy of creators.
+**A sanity check — the Messi test.** Computed per player, the same aggregation is a way to test DOS itself. Football analytics has an informal rule of thumb, the *Messi test*: a metric that claims to capture a footballing quality must rank the players the eye already knows for that quality, or it is measuring something else. DOS passes it, and it passes it for the reason the tactical theory predicts. Spielverlagerung is explicit that diagonality is not a one-off action but a disposition — "a preference", "a cultivated bias against straight-line orthodoxy", diagonality "as a way of life". A player who has internalised that bias does not play one good diagonal; he accumulates them, because he keeps choosing the oblique option over the straight one. The right way to score that player is therefore not the average but the *total* — the diagonal opportunity he generates summed over every pass, carry and take-on he plays. Ranked that way across the five matches (Table 2), the leaderboard is headed by Bayern Munich's creative spine: Joshua Kimmich, then Michael Olise, then Konrad Laimer, Aleksandar Pavlović and Luis Díaz — exactly the players a coach would name as the engines of their team's progression. The per-action ranking tells the mirror-image story: a centre-back and a goalkeeper sit at its foot. A surface built only from skeleton geometry, with no notion of reputation, recovers the game's own hierarchy of creators.
+
+**Table 2. The DOS leaderboard — the Messi test.** The ten players who generate the most total Diagonal Opportunity across the five matches. *Actions* counts passes, carries and take-ons; *Mean DOS* is the per-action average; *Total DOS* is that mean summed over every action the player plays (mean × actions); *Diagonal* is the share of his actions classified diagonal.
+
+| Player | Team | Actions | Mean DOS (×10⁻³) | Total DOS | Diagonal |
+|---|---|--:|--:|--:|--:|
+| Joshua Kimmich | Bayern | 457 | 12.9 | 5.90 | 36% |
+| Michael Olise | Bayern | 255 | 14.1 | 3.60 | 24% |
+| K. Laimer | Bayern | 243 | 13.4 | 3.25 | 32% |
+| A. Pavlović | Bayern | 211 | 14.2 | 3.00 | 28% |
+| Luis Díaz | Bayern | 158 | 15.9 | 2.51 | 22% |
+| Leon Goretzka | Bayern | 120 | 14.5 | 1.74 | 34% |
+| Serge Gnabry | Bayern | 117 | 14.6 | 1.71 | 23% |
+| A. Stiller | Stuttgart | 113 | 14.7 | 1.66 | 34% |
+| Can Uzun | Frankfurt | 109 | 14.6 | 1.59 | 28% |
+| Harry Kane | Bayern | 112 | 14.1 | 1.58 | 29% |
 
 Figure 9 makes this concrete for one of them. Michael Olise — second in the dataset for total diagonal opportunity generated — is read here through the diagonality lens: a per-player, per-opponent pass profile produced directly by the framework, the kind of output a recruitment or analysis desk consumes.
 
