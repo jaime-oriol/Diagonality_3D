@@ -54,8 +54,9 @@ models/
 # Figures (tracked selectively)
 figures/*.mp4
 
-# LaTeX build artifacts (the deliverable PDF is built on Overleaf/Tectonic)
-deliverable/main.pdf
+# LaTeX build artifacts. The compiled deliverable PDF (deliverable/main.pdf)
+# IS tracked — it is the submission document. Only auxiliary build files
+# are ignored.
 deliverable/*.synctex.gz
 *.aux
 *.bbl

@@ -9,11 +9,11 @@ Opportunity Surface (DOS)** — a real-time, orientation-aware pitch map of
 where a diagonal pass, carry, take-on or off-ball run breaks a defender
 who cannot see it.
 
-The full write-up lives in [`deliverable/`](deliverable/): the LaTeX
-source [`main.tex`](deliverable/main.tex), a readable Markdown render
-[`main.md`](deliverable/main.md), and the bibliography
-[`references.bib`](deliverable/references.bib). The PR/FAQ and the
-executive summary are in [`submission/`](submission/).
+The full write-up is the compiled paper
+[`deliverable/main.pdf`](deliverable/main.pdf), built from the LaTeX
+source [`main.tex`](deliverable/main.tex) (a readable Markdown render is
+in [`main.md`](deliverable/main.md)). The PR/FAQ and the executive
+summary are in [`submission/`](submission/).
 
 ---
 
@@ -69,6 +69,7 @@ Diagonality_3D/
 ├── tests/                        # Pytest unit + integration suite
 │
 ├── deliverable/                  # The submission write-up
+│   ├── main.pdf                  # Compiled paper (the deliverable)
 │   ├── main.tex                  # LaTeX source of the paper
 │   ├── main.md                   # Readable Markdown render of the paper
 │   ├── references.bib            # Bibliography
@@ -102,10 +103,10 @@ Diagonality_3D/
 **Per the challenge rules, no hackathon data is uploaded to this
 repository.** `data/` and `outputs/` are git-ignored; inside `results/`
 only `cache/` (the per-match skeleton caches, >100 MB per file) is
-git-ignored. The compiled paper PDF (`deliverable/main.pdf`) is a build
-artefact and is also git-ignored — the paper is available as LaTeX source
-and as the Markdown render `deliverable/main.md`. All versioned artefacts
-are reproducible from the steps below.
+git-ignored. The compiled deliverable `deliverable/main.pdf` is tracked
+in the repository, alongside its LaTeX source and the Markdown render
+`deliverable/main.md`. All versioned artefacts are reproducible from the
+steps below.
 
 ---
 
