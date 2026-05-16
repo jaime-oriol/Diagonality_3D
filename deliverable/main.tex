@@ -778,10 +778,35 @@ tactical theory drew by intuition.
 The same aggregation, computed per opponent rather than over the whole
 sample, becomes a scouting instrument: a picture of where a specific
 team's defenders habitually turn away from danger, and therefore where to
-attack them diagonally. And computed per player, it becomes a profile.
-Figure~\ref{fig:olise} shows one --- a single player's passing read
-through the diagonality lens, the kind of per-player, per-opponent output
-the framework produces directly.
+attack them diagonally.
+
+\paragraph{A sanity check --- the Messi test.} Computed per player, the
+same aggregation is a way to test DOS itself. Football analytics has an
+informal rule of thumb, the \emph{Messi test}: a metric that claims to
+capture a footballing quality must rank the players the eye already knows
+for that quality, or it is measuring something else. DOS passes it, and it
+passes it for the reason the tactical theory predicts. Spielverlagerung is
+explicit that diagonality is not a one-off action but a disposition --- ``a
+preference'', ``a cultivated bias against straight-line orthodoxy'',
+diagonality ``as a way of life''. A player who has internalised that bias
+does not play one good diagonal; he accumulates them, because he keeps
+choosing the oblique option over the straight one. The right way to score
+that player is therefore not the average but the \emph{total} --- the
+diagonal opportunity he generates summed over every pass, carry and
+take-on he plays. Ranked that way across the five matches, the leaderboard
+is headed by Bayern Munich's creative spine: Joshua Kimmich, then Michael
+Olise, then Konrad Laimer, Aleksandar Pavlovi\'c and Luis D\'iaz --- exactly
+the players a coach would name as the engines of their team's progression.
+The per-action ranking tells the mirror-image story: a centre-back and a
+goalkeeper sit at its foot. A surface built only from skeleton geometry,
+with no notion of reputation, recovers the game's own hierarchy of
+creators.
+
+Figure~\ref{fig:olise} makes this concrete for one of them. Michael Olise
+--- second in the dataset for total diagonal opportunity generated --- is
+read here through the diagonality lens: a per-player, per-opponent pass
+profile produced directly by the framework, the kind of output a
+recruitment or analysis desk consumes.
 
 \begin{figure}[H]
   \centering
@@ -795,9 +820,11 @@ the framework produces directly.
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.74\textwidth]{Michael_Olise_Bayern_Hamburg.png}
-  \caption{\textbf{Player application: Michael Olise, Bayern 5--0
-  Hamburg.} Pass map coloured by DFL direction class --- a per-player,
-  per-opponent diagonal profile produced directly by the framework.}
+  \caption{\textbf{The Messi test --- Michael Olise (Bayern 5--0
+  Hamburg).} Olise ranks second in the five-match sample for total
+  diagonal opportunity (DOS) generated. His pass map, coloured by DFL
+  direction class, is the per-player diagonal profile the framework
+  produces directly.}
   \label{fig:olise}
 \end{figure}
 
@@ -855,10 +882,16 @@ match feed can carry.
 \label{sec:limitations}
 
 Four limitations bound this work, each pointing at a next step.
-\textbf{(1)} Five matches is a modest sample. The per-event tests are well
-powered --- thousands of actions --- but the per-team and per-player
-aggregates should be read as indicative until the framework is run over a
-full season. \textbf{(2)} Off-ball runs enter through a deliberately
+\textbf{(1)} The sample is five matches --- the data released for the
+challenge --- and that is a limit on the \emph{input}, not on the method.
+The per-event tests are already well powered (thousands of actions), but
+the per-team and per-player aggregates should be read as indicative until
+more matches are processed. Crucially, every stage of the pipeline is
+match-agnostic, deterministic and memory-safe (chunked, predicate-pushdown
+reads), so running it over a full season is a matter of feeding in more
+data, not of changing a line of code: the framework is already as
+reproducible at season scale as it is here, and the conclusions would only
+sharpen. \textbf{(2)} Off-ball runs enter through a deliberately
 lightweight detector. A learned run-detection front-end, of the kind
 SkillCorner \citep{skillcorner2024} and Stats Perform \citep{optavision2025}
 already operate, would let DOS score \emph{every} run in a match rather

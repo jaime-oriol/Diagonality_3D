@@ -81,7 +81,7 @@ longer used.
 ## Open items
 
 1. **Numbers reconciliation pass.** The stats reports
-   (`aws_results/reports/*.md`) use a slightly different outcome
+   (`results/reports/*.md`) use a slightly different outcome
    definition than `make_figures.py` (report `outcome_pos_rate` vs figure
    `xt_delta>0`). main.tex currently cites the figure numbers for figure
    claims and the report p-values for the tests — verify all are mutually

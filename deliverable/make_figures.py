@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from src.viz.common import BG, WHITE, DIRECTION_COLORS, DOS_CMAP, PKW  # noqa: E402
 
-CSV  = ROOT / "aws_results" / "intermediate" / "csvs" / "dos_validation_full.csv"
+CSV  = ROOT / "results" / "datasets" / "dos_validation_full.csv"
 OUT  = ROOT / "deliverable" / "figures"
 LOGO = ROOT / "figures" / "logos" / "Logo.png"
 

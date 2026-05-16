@@ -66,8 +66,8 @@ Diagonality_3D/
 │   ├── make_figures.py           # Analytical figure generator
 │   └── figures/                  # Figures used in the PDF
 │
-├── aws_results/                  # Versioned mirror of the AWS run
-│   ├── intermediate/ reports/ tables/ videos/ pass_maps/
+├── results/                      # Versioned run results (only cache/ ignored)
+│   ├── datasets/ tables/ reports/ renders/ SUMMARY.md
 │   └── cache/                    # Git-ignored (>100 MB per file)
 │
 ├── figures/                      # Tracked assets (logos, hero videos)
@@ -78,9 +78,10 @@ Diagonality_3D/
 ```
 
 **Per the challenge rules, no hackathon data is uploaded to this
-repository.** `data/`, `cache/` and `outputs/` are git-ignored; the
-skeleton caches (>100 MB per file) are git-ignored under `aws_results/`.
-All versioned artefacts are reproducible from the steps below.
+repository.** `data/`, `cache/` and `outputs/` are git-ignored; inside
+`results/` only `cache/` (the per-match skeleton caches, >100 MB per file)
+is git-ignored. All versioned artefacts are reproducible from the steps
+below.
 
 ---
 
@@ -164,8 +165,8 @@ python3 renders/render_top_dos_videos.py        # + ppcf / vision / frames
 python3 deliverable/make_figures.py
 ```
 
-The AWS run already produced these artefacts; they are versioned under
-[`aws_results/`](aws_results/). Memory-safe throughout (chunked pyarrow
+The run already produced these artefacts; they are versioned under
+[`results/`](results/). Memory-safe throughout (chunked pyarrow
 predicate-pushdown reads).
 
 ## Tests

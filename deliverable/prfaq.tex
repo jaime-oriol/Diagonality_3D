@@ -1,0 +1,271 @@
+% =====================================================================
+%  PR/FAQ — Diagonality: The Best of Both Worlds
+%  AWS World Sports Innovation Cup 2026 — Challenge 2
+%  Compile with Tectonic:  tectonic prfaq.tex
+% =====================================================================
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage[colorlinks=true,linkcolor=black,urlcolor=blue]{hyperref}
+
+\definecolor{accent}{HTML}{1F6FB2}
+\graphicspath{{figures/}}
+
+\titleformat{\section}{\large\bfseries\color{accent}}{}{0pt}{}
+\titleformat{\subsection}{\normalsize\bfseries}{}{0pt}{}
+\titlespacing{\section}{0pt}{14pt}{6pt}
+\titlespacing{\subsection}{0pt}{10pt}{3pt}
+
+\newcommand{\faq}[1]{\subsection{#1}}
+
+\begin{document}
+
+% ---------------------------------------------------------------------
+\begin{center}
+{\LARGE\bfseries Diagonality: The Best of Both Worlds}\\[6pt]
+{\large\color{accent} PR\,/\,FAQ}\\[4pt]
+{\small AWS World Sports Innovation Cup 2026 --- Challenge 2: Unlock the
+Power of 3D Football Data}\\[2pt]
+{\small Jaime Oriol \quad$\cdot$\quad
+\href{https://github.com/jaime-oriol/Diagonality_3D}{github.com/jaime-oriol/Diagonality\_3D}}
+\end{center}
+
+\hrule
+\vspace{10pt}
+
+% =====================================================================
+\section{Press Release}
+
+\textbf{\large Football's most-discussed tactical idea finally has a
+number --- and a real-time map.}
+
+\textit{Diagonality, the preference for oblique passes, carries and runs
+over straight ones, has been argued about for decades but never measured.
+A new framework built on 3D skeleton tracking validates the theory against
+6{,}923 on-ball actions and turns it into the Diagonal Opportunity Surface:
+a live, orientation-aware map of where, when and against which defender to
+attack diagonally.}
+
+\vspace{6pt}
+\textbf{Frankfurt --- 16 May 2026.} Coaches have a name for the smartest
+ball a team can play --- the diagonal --- and a theory for why it works:
+Spielverlagerung's 2025 essay calls it ``the best of both worlds'', a pass
+that carries the progression of a vertical ball and the safety of a
+horizontal one. The essay also hedges every claim it makes, bracketing the
+word ``(assumed)'', because diagonality is at bottom a statement about
+\emph{body orientation} --- and tracking data has only ever recorded
+\emph{positions}. The idea could be admired but not tested, and certainly
+not turned into a tool.
+
+\textbf{Diagonality} closes that gap. Using TRACAB 3D skeleton tracking
+from five Bundesliga 2025--26 matches --- 21 keypoints per player at
+50\,Hz, the first dataset that measures the real head, shoulder and hip
+orientation of every footballer --- the project does two things. First, it
+\textbf{tests the theory}: the essay's argument is distilled into four
+falsifiable hypotheses and checked against 6{,}923 passes, carries and
+take-ons with metrics that owe nothing to the new model. The claims hold.
+Diagonal actions are the efficient compromise between progression and
+safety, they disrupt the defensive block on the lateral axis a vertical
+pass leaves untouched, and they hand the receiver a body already turned
+toward goal.
+
+Second, it \textbf{turns the validated theory into a tool}: the
+\textbf{Diagonal Opportunity Surface (DOS)}. DOS is a real-time pitch map
+that fuses what every defender can see, how each is oriented, and who
+controls space, into a single signal --- the extra control an attacker buys
+by delivering the ball diagonally rather than straight, into the space
+behind a defender who cannot see it. A high-DOS zone is not a black box: it
+decomposes into the three causes the tactical theory names --- a defender's
+blind spot, the orientation delay in reaching it, and the directional
+benefit of arriving oblique.
+
+``Diagonality was the game's most-discussed unquantified idea, and it
+stayed unquantified for a concrete reason --- it is a claim about body
+orientation, and tracking never recorded orientation,'' said Jaime Oriol,
+who built the framework. ``With 3D skeleton data we could finally measure
+it. We tested the theory and it held; then we turned it into a map a coach
+can read frame by frame. We turned a sentence into a number on a pitch.''
+
+For a coaching or analysis desk, DOS is immediately usable. Aggregated per
+opponent, it is a scouting map of where a specific team's defenders
+habitually turn away from danger. Aggregated per player, it is a profile ---
+and it passes the analysts' informal ``Messi test'': ranked by the total
+diagonal opportunity they generate, the leaderboard is headed by exactly
+the players the eye already knows as creators. Gated to what the player on
+the ball can actually perceive, DOS becomes a real-time decision aid,
+showing which passes, dribbles and off-ball runs are both available and
+visible --- and, in a second amber layer, which high-value options the
+carrier has stopped watching and should turn to re-check.
+
+``The honest problem with `play more diagonals' as an instruction is that
+nobody could point to where or when,'' said a hypothetical performance
+analyst, the kind of user the framework is built for. ``A surface that
+lights up the blind side, per opponent, turns a slogan into something you
+can coach on Monday and check on Saturday.''
+
+The framework is released as open source. Every stage runs from the
+repository root, is memory-safe and deterministic, and is documented for
+reproduction; no proprietary hackathon data is redistributed. The same
+pipeline scales without modification from five matches to a full season.
+
+% =====================================================================
+\section{Frequently Asked Questions --- External}
+
+\faq{What exactly is the Diagonal Opportunity Surface?}
+DOS is a value, computed for every cell of the pitch at every frame, equal
+to the extra ball control the attacking team would gain by playing into
+that cell \emph{diagonally} rather than straight. It is built from a
+per-defender vision model, an orientation-aware pitch-control function and
+a cognitive scanning gate. The same routine scores a pass, a carry, a
+take-on or an off-ball run, because all four reduce to an origin and a
+direction.
+
+\faq{How is this different from existing pitch-control models?}
+Every pitch-control model in the literature treats a player as a disc or an
+isotropic Gaussian --- equally fast and equally aware in all directions.
+None encodes which way the player is facing. DOS is built on the opposite
+premise: a defender controls the space in front of them far better than the
+space behind their shoulder, because their \emph{perception} of space is
+asymmetric. That asymmetry is the entire mechanism of diagonality, and it
+requires measured orientation to model.
+
+\faq{Why does 3D skeleton data matter --- couldn't this be done with
+ordinary tracking?}
+No. Ordinary tracking gives positions; body orientation then has to be
+proxied from the velocity vector, which a player violates at will by
+running one way while facing another --- an error of $30$--$50^\circ$, large
+enough to drown the signal. Broadcast pose estimation reduces it to about
+$27^\circ$. TRACAB 3D skeleton tracking removes it: the head, shoulder and
+hip keypoints are measured directly, at 50\,Hz.
+
+\faq{Did the tactical theory actually hold up?}
+Yes, on three independent tests. Diagonal actions produce a value-positive
+outcome more often than forward or sideways actions (the
+progression--safety trade-off); they carry the highest \emph{combined}
+longitudinal-plus-lateral disruption of the defensive block; and their
+receiver needs far less rotation to face goal and sees more team-mates at
+the moment of reception. Honest nuance: the diagonal does not beat the
+vertical pass on \emph{depth} disruption --- forward actions match it there.
+The diagonal's specific edge is the lateral axis, and the combination.
+
+\faq{Is DOS biased by hindsight --- does it secretly use outcomes?}
+No, and this is deliberate. DOS is computed from geometry, the vision model
+and skeleton orientation alone. It never sees a goal, an xG, an xT or a
+success label. That independence is what makes the validation fair: when
+DOS predicts expected-threat gain, it is predicting an outcome it was never
+shown.
+
+\faq{Can it run live during a match?}
+The model is single-frame and the scanning gate is explicitly real-time ---
+it bounds the surface to what the on-ball player can perceive within a
+2.5-second memory window. The current implementation favours clarity and
+reproducibility over latency optimisation; a production deployment would
+target the broadcast or bench-tablet frame budget.
+
+\faq{Does it work for off-ball runs?}
+Yes. Run detection is already a solved, commercial product; the framework
+uses a lightweight detector and applies the same DOS valuation. 2{,}354
+off-ball runs were detected and scored, and the overwhelming majority carry
+positive DOS --- off-ball movement, like on-ball action, is a search for the
+defender's blind side.
+
+\faq{What can a club do with it tomorrow?}
+Four things: match preparation (a per-opponent map of orientation
+vulnerabilities), post-match analysis (every action annotated with its DOS
+and the misalignment it exploited), recruitment (players profiled by the
+diagonal opportunity they generate), and broadcast (the blind-spot and DOS
+surfaces as legible overlays).
+
+% =====================================================================
+\section{Frequently Asked Questions --- Internal}
+
+\faq{Why a reach-field pitch-control model instead of standard
+time-to-intercept?}
+Because the question is not ``who gets there first'' but ``how well is each
+player placed, given how they are turned''. Each player is modelled as an
+anisotropic Gaussian whose width follows an orientation-aware delay --- a
+reaction-time term that grows with visual eccentricity plus a
+change-of-direction penalty, both taken from published biomechanics. A
+defender with a threat behind their shoulder has a control blob compressed
+to half-width: a literal hole in the place the theory says the hole should
+be.
+
+\faq{What was the hardest part?}
+Making a perceptual idea computable without it becoming arbitrary. The
+vision model, the awareness weighting and the detection delay each had to
+trace back to a published mechanism rather than a tuned constant, so that a
+high-DOS cell could be \emph{explained}, not just displayed.
+
+\faq{What failed along the way, and what did it teach you?}
+Several things, and each shaped the final design:
+\begin{itemize}[leftmargin=1.3em,topsep=2pt,itemsep=2pt]
+  \item \textbf{Memory.} A single match does not fit in 8\,GB of RAM. The
+  naive ``load the match'' approach failed immediately; every stage was
+  rebuilt around chunked, predicate-pushdown reads over frame ranges. The
+  pipeline is now memory-safe by construction --- and, as a side effect,
+  trivially scalable.
+  \item \textbf{Carries.} Scoring a carry by its start-to-end direction was
+  wrong: a carry serpentines, stops and turns. The fix was to sample the
+  carry at several frames and use the \emph{instantaneous} skeleton
+  velocity as the true direction, taking the diagonal peak.
+  \item \textbf{A data quirk.} The DFL event XML does not list carries
+  under their parent possession, which silently broke outcome linkage. It
+  had to be repaired by matching on frame range and team.
+  \item \textbf{Visual flicker.} The first real-time DOS render flickered
+  frame to frame. The cause was relative thresholds; the fix was absolute
+  thresholds plus a temporal smoothing pass with a hard reset on possession
+  change.
+  \item \textbf{A surprising result.} DOS and the defensive-disruption
+  metric D-Def turned out only weakly --- and negatively --- correlated. The
+  first instinct was that something was broken. It was not: DOS measures the
+  perceptual \emph{opportunity} at the instant of the action, D-Def the
+  structural \emph{consequence} three seconds later. They are complementary,
+  and the gap between them is itself a coaching signal.
+\end{itemize}
+
+\faq{Why the ``Messi test'', and did it pass?}
+A metric that claims to capture a footballing quality must rank the players
+the eye already knows for it, or it is measuring something else. Ranked by
+total diagonal opportunity generated, the leaderboard is headed by a
+recognisable creative core; by per-action average, a centre-back and a
+goalkeeper sit at the foot of the table. A surface built only from skeleton
+geometry, with no notion of reputation, recovers the game's own hierarchy
+of creators. It passed.
+
+\faq{What are the real limitations?}
+The sample is five matches --- the data released for the challenge. This is
+a limit on the \emph{input}, not the method: the pipeline is match-agnostic
+and deterministic, so a full season is a matter of feeding in more data,
+not changing code. The biomechanical constants are taken from the
+literature rather than fitted to football tracking; fitting them on a
+larger sample would sharpen the surface. And the orientation-aware
+pitch-control function is currently validated indirectly, through DOS.
+
+\faq{What did it cost to run?}
+The metric chain and statistics run on a local 8\,GB machine thanks to the
+memory-safe design. The video renders, being embarrassingly parallel, were
+produced on AWS compute. No specialised hardware and no GPU are required
+for the analysis itself.
+
+\faq{What is next?}
+A learned run-detection front-end so DOS scores every run, not only
+sustained bursts; a direct comparison of the reach-field pitch-control
+function against a standard model; biomechanical constants fitted on a
+larger sample; and a latency-optimised build for live deployment.
+
+\vspace{12pt}
+\hrule
+\vspace{6pt}
+{\small The full technical write-up, all source code and reproduction
+instructions are in the repository:
+\href{https://github.com/jaime-oriol/Diagonality_3D}{github.com/jaime-oriol/Diagonality\_3D}.}
+
+\end{document}
