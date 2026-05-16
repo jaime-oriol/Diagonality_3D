@@ -100,51 +100,62 @@ def save(fig, name):
 
 
 # ====================================================================
-# SLIDE 1 -- intro diagonalidad
+# SLIDE 1 -- portada: solo el core (por que + que hago), sin imagenes
 # ====================================================================
 def slide1():
-    import textwrap
     fig, ax = new_slide()
-    kicker(ax, "AWS World Sports Innovation Cup 2026  ·  Challenge 2")
-    title(ax, "Diagonality: The Best of Both Worlds")
+    cx = GX / 2
 
-    place_image(ax, FIG / "DOS.png", 8.2, 15.3, 1.95, 6.55)
-    ax.text(11.75, 1.5, "Diagonal Opportunity Surface — live frame",
-            color=MUTE, fontsize=10.5, ha="center", va="center", zorder=6)
+    # Kicker centrado — portada con composicion simetrica
+    ax.text(cx, GY - 0.82,
+            "AWS WORLD SPORTS INNOVATION CUP 2026     ·     CHALLENGE 2",
+            color=ACCENT, fontsize=12.5, fontweight="bold",
+            ha="center", va="center", zorder=6)
 
-    y = 6.55
-    ax.text(0.7, y, "Most discussed. Least quantified.", color=WHITE,
-            fontsize=15, fontweight="bold", va="center", zorder=6)
-    y -= 0.66
+    # Titulo en dos niveles
+    ax.text(cx, 6.95, "Diagonality", color=WHITE, fontsize=52,
+            fontweight="bold", ha="center", va="center", zorder=6)
+    ax.text(cx, 5.98, "The Best of Both Worlds", color=ACCENT,
+            fontsize=24, ha="center", va="center", zorder=6)
 
-    bullets = [
-        "“Best of both worlds”: vertical progression with horizontal safety.",
-        "Yet it is a claim about body orientation — never measured by tracking.",
-        "3D skeleton (21 keypoints, 50 Hz) now measures it, for the first time.",
+    # Regla fina de acento
+    ax.add_patch(plt.Rectangle((cx - 1.45, 5.36), 2.9, 0.03,
+                               color="#5a5e63", zorder=6))
+
+    # POR QUE — el problema, en un parrafo apretado y centrado
+    why = [
+        "Football's most-discussed tactical idea has never been measured.",
+        "The diagonal is a claim about body orientation, and tracking only",
+        "ever recorded positions. 3D skeleton tracking — 21 keypoints at",
+        "50 Hz — measures it for the first time.",
     ]
-    for b in bullets:
-        ax.add_patch(plt.Circle((0.82, y), 0.07, color=ACCENT, zorder=6))
-        yy = y
-        for ln in textwrap.wrap(b, width=46):
-            ax.text(1.12, yy, ln, color=WHITE, fontsize=13, va="center",
-                    zorder=6)
-            yy -= 0.42
-        y = yy - 0.16
+    y = 4.78
+    for ln in why:
+        ax.text(cx, y, ln, color="#c9cdd3", fontsize=14.5,
+                ha="center", va="center", zorder=6)
+        y -= 0.49
 
-    y -= 0.05
-    for label, sub, ec in [
+    # QUE HAGO — dos pilares compactos, lado a lado
+    pillars = [
         ("We TEST the theory",
-         "6,923 actions · model-independent metrics · H1–H4 hold", ACCENT),
+         "6,923 on-ball actions scored with\n"
+         "model-independent metrics — H1–H4 hold.", ACCENT),
         ("We BUILD the tool",
-         "the Diagonal Opportunity Surface — a real-time map", AMBER)]:
-        ax.add_patch(FancyBboxPatch((0.7, y - 0.9), 7.2, 0.9,
-                     boxstyle="round,pad=0.02,rounding_size=0.1",
-                     fc=PANEL, ec=ec, lw=1.6, zorder=4))
-        ax.text(0.98, y - 0.32, label, color=ec, fontsize=14,
-                fontweight="bold", va="center", zorder=6)
-        ax.text(0.98, y - 0.64, sub, color=MUTE, fontsize=10.8, va="center",
-                zorder=6)
-        y -= 1.06
+         "the Diagonal Opportunity Surface —\n"
+         "a real-time, orientation-aware map.", AMBER),
+    ]
+    bw, gap, bh = 6.7, 0.6, 1.46
+    x0 = cx - bw - gap / 2
+    y_bot = 1.06
+    for i, (label, sub, ec) in enumerate(pillars):
+        bx = x0 + i * (bw + gap)
+        ax.add_patch(FancyBboxPatch((bx, y_bot), bw, bh,
+                     boxstyle="round,pad=0.02,rounding_size=0.12",
+                     fc=PANEL, ec=ec, lw=1.8, zorder=4))
+        ax.text(bx + 0.42, y_bot + bh - 0.42, label, color=ec,
+                fontsize=15, fontweight="bold", va="center", zorder=6)
+        ax.text(bx + 0.42, y_bot + 0.5, sub, color=MUTE, fontsize=11,
+                va="center", zorder=6, linespacing=1.5)
 
     footer(ax, 1)
     return save(fig, "slide1.png"), None
