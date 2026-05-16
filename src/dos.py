@@ -587,8 +587,8 @@ def dos_for_event(
         params, vision_smoothing: Model parameters.
 
     Returns:
-        Dict with: dos, ppcf_att_baseline, ppcf_att_diagonal, direction_class,
-        event_direction, awareness_mean, detection_delay_mean.
+        Dict with: dos, ppcf_att_baseline, ppcf_att_with_awareness,
+        direction_class, event_direction, awareness_mean, detection_delay_mean.
     """
     if params is None:
         params = default_params()

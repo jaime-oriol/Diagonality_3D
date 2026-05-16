@@ -6,7 +6,7 @@ event (passes, carries, receptions, shots) plus windows for D-Def and
 velocity computation. Saves flat parquets that load instantly.
 
 This is the pipeline that runs once per match (locally for dev,
-on SageMaker for all 5). After preprocessing, all downstream modules
+on EC2 for all 5). After preprocessing, all downstream modules
 (orientation, vision, theta, ddef, ppcf) work from the cache.
 
 Output in cache/{match}/:
@@ -44,7 +44,7 @@ DDEF_WINDOW_FRAMES = int(3.0 * FRAMERATE)  # 150
 # Pre-event window: 3s before at full 50Hz (150 frames). Sized to fully
 # cover the 2.5s scanning memory lookback used by src/scanning.py, plus
 # 0.5s of buffer. Bumping this requires regenerating the cache via
-# test/regenerate_caches.py.
+# pipeline/regenerate_caches.py.
 PRE_WINDOW_FRAMES = int(3.0 * FRAMERATE)  # 150
 
 
@@ -174,11 +174,11 @@ def _collect_frames(events: pd.DataFrame) -> np.ndarray:
     FULL 50Hz resolution everywhere — no subsampling.
 
     For passes/receptions/shots:
-        -1s before (50 frames) + event frame + 3s after (150 frames)
-        = 201 frames per event at 50Hz
+        -3s before (150 frames) + event frame + 3s after (150 frames)
+        = 301 frames per event at 50Hz
 
     For carries:
-        -1s before start + FULL carry at 50Hz + 3s after end
+        -3s before start + FULL carry at 50Hz + 3s after end
         = variable, up to ~1000 frames for a 16s carry
     """
     frame_set: Set[int] = set()
@@ -192,15 +192,15 @@ def _collect_frames(events: pd.DataFrame) -> np.ndarray:
             end = row.get("parquet_frame_end", -1)
             if isinstance(end, (int, np.integer)) and end > 0:
                 end = int(end)
-                # -1s before start ... carry duration ... +3s after end
+                # -3s before start ... carry duration ... +3s after end
                 for f in range(base - PRE_WINDOW_FRAMES, end + DDEF_WINDOW_FRAMES + 1):
                     frame_set.add(f)
             else:
-                # Fallback: -1s to +3s from start
+                # Fallback: -3s to +3s from start
                 for f in range(base - PRE_WINDOW_FRAMES, base + DDEF_WINDOW_FRAMES + 1):
                     frame_set.add(f)
         else:
-            # Passes, receptions, shots: -1s to +3s
+            # Passes, receptions, shots: -3s to +3s
             for f in range(base - PRE_WINDOW_FRAMES, base + DDEF_WINDOW_FRAMES + 1):
                 frame_set.add(f)
 

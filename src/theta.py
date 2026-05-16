@@ -181,7 +181,7 @@ def compute_pass_theta(
     # AXIS 3: RISK-REWARD
     # ================================================================
     xp = event.get("xp")
-    success = 1.0 if event.get("evaluation") == "successfullyCompleted" else 0.0
+    success = 1.0 if event.get("evaluation") in ("successfullyCompleted", "successful") else 0.0
 
     # ================================================================
     # BUILD RESULT
