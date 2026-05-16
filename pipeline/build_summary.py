@@ -26,7 +26,7 @@ import pandas as pd
 
 OUT_MD = Path("outputs/SUMMARY.md")
 TABLES_DIR = Path("outputs/tables")
-REPORTS_DIR = Path("outputs/reports")
+INTERMEDIATE_DIR = Path("outputs/intermediate")
 VIDEOS_DIR = Path("outputs/videos")
 FRAMES_DIR = Path("outputs/frames")
 
@@ -316,8 +316,9 @@ def main():
 
     md.append(_section_header("Files index (every artefact)"))
     md.append("\n### Reports")
-    for r in [REPORTS_DIR / f for f in
-              ("report_xt.md", "report_ddef.md", "report_theta.md")]:
+    for r in [INTERMEDIATE_DIR / f for f in
+              ("dos_validation_report_xt.md", "dos_validation_report_ddef.md",
+               "dos_validation_report_theta.md")]:
         if r.exists():
             md.append(f"- [{r.name}]({r.relative_to(OUT_MD.parent)})")
 
