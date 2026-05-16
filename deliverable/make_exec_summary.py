@@ -100,55 +100,39 @@ def save(fig, name):
 
 
 # ====================================================================
-# SLIDE 1 -- portada: solo el core (por que + que hago), sin imagenes
+# SLIDE 1 -- portada minimalista: titulo + una linea de que es
 # ====================================================================
 def slide1():
     fig, ax = new_slide()
     cx = GX / 2
 
-    # Kicker centrado — portada con composicion simetrica
-    ax.text(cx, GY - 0.92,
+    # Kicker centrado
+    ax.text(cx, 7.55,
             "AWS WORLD SPORTS INNOVATION CUP 2026     ·     CHALLENGE 2",
             color=ACCENT, fontsize=12.5, fontweight="bold",
             ha="center", va="center", zorder=6)
 
     # Titulo en dos niveles
-    ax.text(cx, 6.85, "Diagonality", color=WHITE, fontsize=52,
+    ax.text(cx, 5.70, "Diagonality", color=WHITE, fontsize=56,
             fontweight="bold", ha="center", va="center", zorder=6)
-    ax.text(cx, 5.85, "The Best of Both Worlds", color=ACCENT,
-            fontsize=24, ha="center", va="center", zorder=6)
+    ax.text(cx, 4.58, "The Best of Both Worlds", color=ACCENT,
+            fontsize=26, ha="center", va="center", zorder=6)
 
     # Regla fina de acento
-    ax.add_patch(plt.Rectangle((cx - 1.45, 5.18), 2.9, 0.03,
+    ax.add_patch(plt.Rectangle((cx - 1.5, 3.92), 3.0, 0.03,
                                color=ACCENT, zorder=6))
 
-    # POR QUE — el problema, parrafo apretado, en blanco
-    why = [
-        "Football's most-discussed tactical idea has never been measured.",
-        "The diagonal is a claim about body orientation, and tracking only",
-        "ever recorded positions. 3D skeleton tracking — 21 keypoints at",
-        "50 Hz — measures it for the first time.",
-    ]
-    y = 4.45
-    for ln in why:
-        ax.text(cx, y, ln, color=WHITE, fontsize=14.5,
-                ha="center", va="center", zorder=6)
-        y -= 0.5
+    # Una linea — que es esto, nada mas
+    ax.text(cx, 3.22,
+            "Testing the tactical theory of diagonality — and turning it into",
+            color=WHITE, fontsize=14, ha="center", va="center", zorder=6)
+    ax.text(cx, 2.74,
+            "a real-time, orientation-aware map — from 3D skeleton tracking.",
+            color=WHITE, fontsize=14, ha="center", va="center", zorder=6)
 
-    # QUE HAGO — dos pilares, sin cajas, mucho aire
-    pillars = [
-        (4.3, ACCENT, "We TEST the theory",
-         "6,923 on-ball actions scored with\n"
-         "model-independent metrics — H1–H4 hold."),
-        (11.7, AMBER, "We BUILD the tool",
-         "the Diagonal Opportunity Surface —\n"
-         "a real-time, orientation-aware map."),
-    ]
-    for px, ec, label, sub in pillars:
-        ax.text(px, 2.05, label, color=ec, fontsize=16,
-                fontweight="bold", ha="center", va="center", zorder=6)
-        ax.text(px, 1.30, sub, color=WHITE, fontsize=11.5,
-                ha="center", va="center", zorder=6, linespacing=1.55)
+    # Autor
+    ax.text(cx, 1.45, "Jaime Oriol", color=WHITE, fontsize=13,
+            ha="center", va="center", zorder=6)
 
     footer(ax, 1)
     return save(fig, "slide1.png"), None
