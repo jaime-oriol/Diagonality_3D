@@ -222,7 +222,7 @@ def slide2():
             "H1 perception  ·  H2 bi-axial disruption  ·  H3 receiver advantage"
             "  ·  H4 progression–safety trade-off",
             color=WHITE, fontsize=11.5, va="center", zorder=6)
-    ax.text(15.05, vy, "6,923 actions\n2,354 off-ball runs\nall hold",
+    ax.text(15.05, vy, "6,923 actions\n2,354 off-ball runs\ntheory holds",
             color=AMBER, fontsize=11, ha="right", va="center",
             fontweight="bold", zorder=6, linespacing=1.4)
 

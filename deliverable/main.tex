@@ -3,7 +3,7 @@
 %  AWS World Sports Innovation Cup 2026 - Challenge 2: 3D Football Data
 %
 %  Compile with Tectonic or on Overleaf (pdfLaTeX + BibTeX, natbib).
-%  Final PDF -> docs/Challenge_3D_Football_Data.pdf
+%  Final PDF -> deliverable/main.pdf
 % =====================================================================
 \documentclass[11pt]{article}
 
@@ -55,8 +55,9 @@ captured positions, never orientation. We use TRACAB 3D skeleton tracking
 from five Bundesliga 2025--26 matches (21 keypoints per player at 50\,Hz,
 the first dataset with directly measured head, shoulder and hip
 orientation) to do two things. First, we \textbf{test the article}: we
-restate its claims as four falsifiable hypotheses and check each against
-6{,}923 on-ball actions with metrics that owe nothing to our own model.
+restate its claims as a perceptual premise and three falsifiable
+hypotheses, and test the hypotheses against 6{,}923 on-ball actions with
+metrics that owe nothing to our own model.
 The claims hold --- diagonal actions are Pareto-efficient on the
 progression--safety plane, they disrupt the defensive block on its lateral
 axis, and they hand the receiver a body already turned toward goal.
@@ -125,9 +126,9 @@ keypoints of every player at 50\,Hz.
 
 This work proceeds in two movements. First we \textbf{test the theory}.
 The Spielverlagerung essay is a long, qualitative argument; we distil it
-into four falsifiable hypotheses (Sec.~\ref{sec:claims}) and check each
-against the data using only classical, model-independent metrics
-(Sec.~\ref{sec:validate}). The claims hold. That result licenses the
+into a perceptual premise and three falsifiable hypotheses
+(Sec.~\ref{sec:claims}) and test them against the data using only
+classical, model-independent metrics (Sec.~\ref{sec:validate}). The claims hold. That result licenses the
 second movement, which is the contribution. If diagonality genuinely
 works, knowing so is not enough: a coach still needs to know \emph{where}
 on the pitch, \emph{when} in a possession and against \emph{which}
@@ -282,11 +283,12 @@ analysis contrasts the first three.
 
 The Spielverlagerung essay is an argument, not a dataset. Before we can
 test it we must state precisely what it asserts. We read the article and
-distil its reasoning into four hypotheses; each is introduced by the
-mechanism the article proposes and closed by the prediction we will test
-in Sec.~\ref{sec:validate}.
+distil its reasoning into four claims: a perceptual premise (H1) the
+framework is built on, and three falsifiable hypotheses (H2--H4) tested in
+Sec.~\ref{sec:validate}. Each is introduced by the mechanism the article
+proposes.
 
-\subsection{H1 --- Perception: the diagonal arrives where the defender is blind}
+\subsection{H1 --- The perceptual premise: a defender reacts late to what he cannot see}
 \label{sec:h1}
 
 The essay's central mechanism is perceptual. ``A diagonal pass,'' it
@@ -309,10 +311,16 @@ with its eccentricity \citep{vater2024}. Skilled players compensate by
 scanning --- the habitual shoulder-check that \citet{jordet2013} and
 \citet{mcguckian2018} tie to performance --- but scanning is itself
 evidence that what is not currently foveated is, for that moment, unknown.
-\textbf{Prediction:} diagonal actions reach defenders whose body and gaze
-are turned away from them more than orthogonal actions do, and a model of
-defender vision should register the relevant defenders as comparatively
-blind.
+\textbf{Role.} H1 is the perceptual \emph{premise} of this work, not a
+class-average contrast to be tested like the others. Where H2--H4 each
+predict a measurable difference between direction classes, H1 asserts the
+mechanism itself --- that a defender acts on what he sees, and resolves
+late what falls in his periphery or behind his shoulder. We therefore do
+not test it with a summary statistic; we \emph{operationalise} it. The
+vision model (Sec.~\ref{sec:vision}) and the detection-delay term
+(Sec.~\ref{sec:dosdef}) are H1 made computable, and the premise stands or
+falls with the surface built on it: were it wrong, DOS could not predict
+value --- and Sec.~\ref{sec:res-dos} shows it does.
 
 \subsection{H2 --- Bi-axial disruption: the diagonal breaks two lines at once}
 \label{sec:h2}
@@ -374,7 +382,10 @@ rate of value-positive outcomes.
 \section{Does the Data Confirm the Article?}
 \label{sec:validate}
 
-We now test H1--H4. Every metric in this section --- the DFL direction
+We now test H2--H4; H1, the perceptual premise, is operationalised by the
+model itself and tested indirectly when the resulting surface predicts
+value (Sec.~\ref{sec:res-dos}). Every metric in this section --- the DFL
+direction
 class, expected threat \citep{singh2018}, defensive disruption
 \citep{goes2019,forcher2021}, and the orientation angles read directly
 from the skeleton --- is classical and owes nothing to the model
@@ -574,7 +585,7 @@ $\mathrm{reach}_i(x) = \max(0,\,W-\mathrm{delay}_i(x))\cdot v_{\max}$ for
 an integration window $W$. The reach then sets the width of the player's
 influence Gaussian:
 \begin{equation}
-  \sigma_i(x) = \sigma_0\left[(1-m) + m\,\frac{\mathrm{reach}_i(x)}{\mathrm{reach}_{\max}}\right],
+  \sigma_i(x) = \sigma_0\left[(1-m) + m\,\operatorname{clip}\!\left(\frac{\mathrm{reach}_i(x)}{\mathrm{reach}_{\max}},\,0,\,1\right)\right],
   \qquad
   \mathrm{infl}_i(x) = \exp\!\left(-\frac{\lVert x-\mathrm{drift}_i(x)\rVert^2}{2\,\sigma_i(x)^2}\right).
 \end{equation}
