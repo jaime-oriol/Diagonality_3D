@@ -222,7 +222,7 @@ def video_slide(idx, kick, ttl, caption, fig_png, vid_mp4):
     kicker(ax, kick)
     title(ax, ttl)
     rect = place_image(ax, FIG / fig_png, 0.7, 15.3, 1.5, GY - 2.05)
-    ax.text(8.0, 1.05, caption, color=MUTE, fontsize=12.2, ha="center",
+    ax.text(8.0, 1.05, caption, color=WHITE, fontsize=12.2, ha="center",
             va="center", zorder=6)
     footer(ax, idx)
     png = save(fig, f"slide{idx}.png")
