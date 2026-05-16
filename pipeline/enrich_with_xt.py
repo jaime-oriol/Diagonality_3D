@@ -104,9 +104,9 @@ def enrich(df: pd.DataFrame) -> pd.DataFrame:
       success ≡ evaluation in {"successfullyCompleted", "successful"}
                 (take-ons are filtered to attacker-wins so always success)
       pass / carry  → xt_delta as in `xt_delta_fn`
-      take-on       → xt_dest = xt_origin, xt_delta = 0 (preservation)
-                      (better readable cross-check: use xt_origin as the
-                       outcome variable for take-ons)
+      take-on       → xt_dest = NaN, xt_delta = 0 (preservation; no
+                      displacement). The interpretable outcome variable
+                      for take-ons is xt_origin (the xT of the duel zone).
     """
     df = df.copy()
 

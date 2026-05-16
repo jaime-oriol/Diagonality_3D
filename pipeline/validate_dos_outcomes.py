@@ -2,7 +2,7 @@
 
 Loads the skeleton in **frame chunks** via pyarrow predicate pushdown so
 WSL never sees more than ~5M skeleton rows in memory at once. Computes
-`dos_for_event` for every pass and carry, then runs:
+`dos_for_event` for every pass, carry and take-on, then runs:
 
   - Mann-Whitney U with rank-biserial effect size (DOS in events that
     led to chances vs the rest, line breaks vs the rest, completed vs
@@ -21,10 +21,12 @@ WSL never sees more than ~5M skeleton rows in memory at once. Computes
 
 Usage:
     python3 pipeline/validate_dos_outcomes.py [--sample N] [--matches NAMES...]
-                                          [--chunk N]
+                              [--max-frame-span N] [--max-chunk-events N]
 
 `--sample N` randomly subsamples N events per match (default: all).
-`--chunk N` controls the per-chunk frame batch (default 200 events).
+`--max-frame-span N` caps the parquet-frame range per skeleton chunk
+    (the primary memory cap; default 30000 ~ 10 min of game @ 50fps).
+`--max-chunk-events N` hard-caps events per chunk (default 250).
 Outputs:
     outputs/intermediate/dos_validation_raw.csv
     outputs/intermediate/dos_validation_quintiles.png
@@ -842,7 +844,8 @@ def _write_report(
     lines.append(f"- Matches analysed: **{df['match'].nunique()}**")
     lines.append(f"- Events evaluated: **{len(df):,}** "
                  f"(passes={int((df['event_type']=='pass').sum())}, "
-                 f"carries={int((df['event_type']=='carry').sum())})")
+                 f"carries={int((df['event_type']=='carry').sum())}, "
+                 f"take-ons={int((df['event_type']=='takeon').sum())})")
     lines.append(f"- DOS source: `dos_for_event` on the **real** event "
                  f"direction (vision smoothing={VISION_SMOOTHING}, default "
                  f"PPCF params).")

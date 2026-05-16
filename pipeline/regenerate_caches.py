@@ -21,7 +21,7 @@ What this script does (in order, per match):
   3. Print a summary of cache sizes per match at the end.
 
 USAGE:
-    source ~/anaconda3/bin/activate base
+    source ~/anaconda3/bin/activate ritmo
     python3 pipeline/regenerate_caches.py            # all 5 matches
     python3 pipeline/regenerate_caches.py Bayern_Hamburg Frankfurt_Bayern  # subset
 

@@ -6,13 +6,18 @@ Outputs (under `outputs/tables/`):
   players_by_xt.csv           Top players by mean xT-delta gained
   players_by_ddef.csv         Top players by mean D-Def disruption
   players_by_wrongfooting.csv Top players by mean n_wrongfooted (theta)
+  players_by_awareness_low.csv Top players by lowest defender awareness
   players_by_diag_share.csv   Top players by % diagonal of their actions
   players_by_volume.csv       Top players by event volume (n_events)
   teams_summary.csv           Per team: DOS, xT, D-Def, diag share, n events
   matches_summary.csv         Per match: counts, means, top scorer
   matches_team_dir_breakdown.csv  Per (match, team, direction) breakdown
   direction_breakdown.csv     Global per-direction-class summary
+  zones_origin_breakdown.csv  Per origin zone (center/half_space/wing)
+  zones_dest_breakdown.csv    Per destination zone
+  zones_x_direction.csv       Per (origin_zone, direction_class)
   events_per_player_match.csv Tall table: (player, match, n_events, mean_dos)
+  top_events_full_vector.csv  Top-50 events by DOS with the full metric vector
 
 Filter: players with a minimum of `MIN_EVENTS_PLAYER` events (default 30)
 to keep rankings statistically meaningful.
