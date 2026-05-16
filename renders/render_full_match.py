@@ -17,7 +17,8 @@ Usage:
   python3 renders/render_full_match.py --match Frankfurt_Bayern --type vision --focus-player DFL-OBJ-J01R3R
 
 Output (configurable via --out-dir, default outputs/full_match/):
-  outputs/full_match/{match}_{type}[_focus-{player}].mp4
+  outputs/full_match/{match}_{type}.mp4                  (dos / ppcf)
+  outputs/full_match/{match}_vision_focus_{player}.mp4   (vision)
 
 Per-frame render times (observed): DOS ~1.67 s, PPCF ~1.34 s, Vision ~1.07 s.
 With 36 workers on c5.9xlarge a 70-min match takes ~2-3 h wall per render type.

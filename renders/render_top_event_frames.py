@@ -2,9 +2,9 @@
 event in `outputs/tables/highlight_events.json`. Cheap alternative to
 the video renders — for the slide deck and frame gallery.
 
-Per event, two PNGs:
-  outputs/frames/{event_id}_dos.png    DOS + shadow at event_frame
-  outputs/frames/{event_id}_ppcf.png   PPCF reach-field at event_frame
+Per event, two PNGs named {match}_{player}_{type}_{frame}_{layer}.png:
+  outputs/frames/..._dos.png    DOS + shadow at event_frame
+  outputs/frames/..._ppcf.png   PPCF reach-field at event_frame
 
 Both use the same player markers + shoulder bars + head wedge style as
 the video renders, so the gallery is visually consistent with the videos.

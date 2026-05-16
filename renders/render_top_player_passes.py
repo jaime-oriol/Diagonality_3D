@@ -5,8 +5,8 @@ passes, render the project-style pass map (`src/viz/passes_plot.py`)
 containing direction-class colored arrows + Opta-style stats footer.
 
 Player selection: top `TOP_N_PLAYERS` of the `players_by_dos` ranking,
-filtered to attacking positions (any non-GK / non-CB) so we focus on
-players whose diagonality is the storytelling angle.
+filtered to outfield positions (non-GK) so we focus on players whose
+diagonality is the storytelling angle.
 
 Output naming:
   outputs/frames/pass_maps/{PlayerName}_{Match}.png
@@ -38,7 +38,7 @@ TOP_N_PLAYERS = 8
 MIN_PASSES_PER_MATCH = 12          # don't render maps with too few passes
 MAX_MATCHES_PER_PLAYER = 3          # cap renders per player
 
-# Positions we EXCLUDE — pass maps for GKs / IVR aren't the story.
+# Positions we EXCLUDE — pass maps for GKs aren't the story.
 EXCLUDE_POSITIONS = {"TW"}
 
 
