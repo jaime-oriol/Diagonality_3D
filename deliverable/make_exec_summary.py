@@ -31,7 +31,7 @@ BG      = "#26282b"
 PANEL   = "#313332"
 WHITE   = "#f4f5f6"
 MUTE    = "#a8adb3"
-ACCENT  = "#38bdf8"   # cyan DOS
+ACCENT  = "#3b82f6"   # corporate blue
 AMBER   = "#f0b450"
 
 plt.rcParams["font.family"] = "DejaVu Sans"
@@ -61,7 +61,7 @@ def footer(ax, page):
         img = plt.imread(str(LOGO))
         ar = img.shape[1] / img.shape[0]
         h = 0.62; w = h * ar
-        ax.imshow(img, extent=[GX - 0.55 - w, GX - 0.55, GY - 0.78, GY - 0.78 + h],
+        ax.imshow(img, extent=[GX - 0.45 - w, GX - 0.45, GY - 0.88, GY - 0.88 + h],
                   zorder=6, aspect="auto")
 
 
@@ -107,55 +107,48 @@ def slide1():
     cx = GX / 2
 
     # Kicker centrado — portada con composicion simetrica
-    ax.text(cx, GY - 0.82,
+    ax.text(cx, GY - 0.92,
             "AWS WORLD SPORTS INNOVATION CUP 2026     ·     CHALLENGE 2",
             color=ACCENT, fontsize=12.5, fontweight="bold",
             ha="center", va="center", zorder=6)
 
     # Titulo en dos niveles
-    ax.text(cx, 6.95, "Diagonality", color=WHITE, fontsize=52,
+    ax.text(cx, 6.85, "Diagonality", color=WHITE, fontsize=52,
             fontweight="bold", ha="center", va="center", zorder=6)
-    ax.text(cx, 5.98, "The Best of Both Worlds", color=ACCENT,
+    ax.text(cx, 5.85, "The Best of Both Worlds", color=ACCENT,
             fontsize=24, ha="center", va="center", zorder=6)
 
     # Regla fina de acento
-    ax.add_patch(plt.Rectangle((cx - 1.45, 5.36), 2.9, 0.03,
-                               color="#5a5e63", zorder=6))
+    ax.add_patch(plt.Rectangle((cx - 1.45, 5.18), 2.9, 0.03,
+                               color=ACCENT, zorder=6))
 
-    # POR QUE — el problema, en un parrafo apretado y centrado
+    # POR QUE — el problema, parrafo apretado, en blanco
     why = [
         "Football's most-discussed tactical idea has never been measured.",
         "The diagonal is a claim about body orientation, and tracking only",
         "ever recorded positions. 3D skeleton tracking — 21 keypoints at",
         "50 Hz — measures it for the first time.",
     ]
-    y = 4.78
+    y = 4.45
     for ln in why:
-        ax.text(cx, y, ln, color="#c9cdd3", fontsize=14.5,
+        ax.text(cx, y, ln, color=WHITE, fontsize=14.5,
                 ha="center", va="center", zorder=6)
-        y -= 0.49
+        y -= 0.5
 
-    # QUE HAGO — dos pilares compactos, lado a lado
+    # QUE HAGO — dos pilares, sin cajas, mucho aire
     pillars = [
-        ("We TEST the theory",
+        (4.3, ACCENT, "We TEST the theory",
          "6,923 on-ball actions scored with\n"
-         "model-independent metrics — H1–H4 hold.", ACCENT),
-        ("We BUILD the tool",
+         "model-independent metrics — H1–H4 hold."),
+        (11.7, AMBER, "We BUILD the tool",
          "the Diagonal Opportunity Surface —\n"
-         "a real-time, orientation-aware map.", AMBER),
+         "a real-time, orientation-aware map."),
     ]
-    bw, gap, bh = 6.7, 0.6, 1.46
-    x0 = cx - bw - gap / 2
-    y_bot = 1.06
-    for i, (label, sub, ec) in enumerate(pillars):
-        bx = x0 + i * (bw + gap)
-        ax.add_patch(FancyBboxPatch((bx, y_bot), bw, bh,
-                     boxstyle="round,pad=0.02,rounding_size=0.12",
-                     fc=PANEL, ec=ec, lw=1.8, zorder=4))
-        ax.text(bx + 0.42, y_bot + bh - 0.42, label, color=ec,
-                fontsize=15, fontweight="bold", va="center", zorder=6)
-        ax.text(bx + 0.42, y_bot + 0.5, sub, color=MUTE, fontsize=11,
-                va="center", zorder=6, linespacing=1.5)
+    for px, ec, label, sub in pillars:
+        ax.text(px, 2.05, label, color=ec, fontsize=16,
+                fontweight="bold", ha="center", va="center", zorder=6)
+        ax.text(px, 1.30, sub, color=WHITE, fontsize=11.5,
+                ha="center", va="center", zorder=6, linespacing=1.55)
 
     footer(ax, 1)
     return save(fig, "slide1.png"), None
