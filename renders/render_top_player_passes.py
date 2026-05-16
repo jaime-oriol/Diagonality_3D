@@ -241,7 +241,7 @@ def main():
                 subtitle=_match_subtitle(tg["match"], info),
                 attacking_right=True,
                 team_logo_path=_team_logo_path(tg["team_name"]) or None,
-                project_logo_path="figures/Logo.png" if Path("figures/Logo.png").exists() else None,
+                project_logo_path="figures/logos/Logo.png" if Path("figures/logos/Logo.png").exists() else None,
                 save_path=str(out),
             )
         except Exception as e:
