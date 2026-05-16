@@ -92,13 +92,6 @@ def title(ax, text, y=GY - 1.35):
             va="center", zorder=6)
 
 
-def bullet(ax, x, y, head, body, w=6.6):
-    ax.add_patch(plt.Circle((x + 0.12, y), 0.07, color=ACCENT, zorder=6))
-    txt = f"$\\bf{{{head}}}$  " if head else ""
-    ax.text(x + 0.42, y, txt, color=WHITE, fontsize=15.5, va="center", zorder=6)
-    return
-
-
 def save(fig, name):
     p = SLD / name
     fig.savefig(str(p), facecolor=BG)

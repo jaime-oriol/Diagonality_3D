@@ -1,6 +1,6 @@
 # Deliverable build plan — Diagonality: The Best of Both Worlds
 
-**Deliverable:** `docs/Challenge_3D_Football_Data.pdf`
+**Deliverable:** `deliverable/main.pdf`
 **Source:** `deliverable/` (LaTeX, compile on Overleaf with pdfLaTeX + BibTeX)
 **Event:** AWS World Sports Innovation Cup 2026 — Challenge 2.
 
@@ -86,5 +86,5 @@ longer used.
    `xt_delta>0`). main.tex currently cites the figure numbers for figure
    claims and the report p-values for the tests — verify all are mutually
    consistent before submission.
-2. Compile on Overleaf (no local LaTeX) → export → `docs/Challenge_3D_Football_Data.pdf`.
+2. Compile on Overleaf (no local LaTeX) → export → `deliverable/main.pdf`.
 3. Off-ball runs: optional learned detector (future work, framed as such).
