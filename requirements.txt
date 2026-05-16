@@ -12,3 +12,6 @@ Pillow==12.0.0
 
 # Test runner (only needed for the test suite; safe to install in prod too)
 pytest==8.4.2
+
+# Executive-summary slides (only needed for deliverable/make_exec_summary.py)
+python-pptx==1.0.2

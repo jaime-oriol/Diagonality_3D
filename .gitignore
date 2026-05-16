@@ -15,7 +15,7 @@ docs/
 # Run results — track everything EXCEPT the cache. Cache files are
 # 850-950 MB each (exceed GitHub's 100MB hard limit) and are reproducible
 # from data/hackathon via pipeline/regenerate_caches.py. Tracked inside
-# results/: datasets/, tables/, reports/, renders/ and SUMMARY.md.
+# results/: datasets/, tables/, reports/ and renders/.
 /results/cache/
 
 # Python
