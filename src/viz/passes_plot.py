@@ -4,8 +4,8 @@ passes_plot — Player-pass visualization in our brand style.
 Inspired by the Opta Analyst player-pass figure but adapted to the
 project's dark theme + the Diagonality-3D narrative:
 
-  - Pass arrows colored by **direction class** (gold = diagonal, the SV
-    signature) instead of just success.
+  - Pass arrows colored by **direction class** (lawn green = diagonal,
+    the SV signature) instead of just success.
   - Unsuccessful passes use the SAME class colour but a dashed line at
     lower alpha — the per-class density stays readable.
   - Header and footer are anchored to the **exact horizontal extent of
@@ -13,7 +13,7 @@ project's dark theme + the Diagonality-3D narrative:
     grid-aligned regardless of figsize.
   - Footer = 3 uniform blocks: 2x2 direction legend, attacking-direction
     triangles, Opta-style outlined number-in-circle stats with diagonal
-    share highlighted in gold.
+    share highlighted in lawn green.
 
 Schema expected for the passes DataFrame (one row per pass):
     x, y                 — origin in TRACAB meters (centered, [-52.5, 52.5])

@@ -59,7 +59,7 @@ SHADOW_CMAP = LinearSegmentedColormap.from_list(
 
 # ── Direction-class palette (passes / carries / regates) ────────────────
 # Hand-picked from the project palette to maximize contrast on the dark BG
-# and keep the SV diagonality bias visually obvious: gold = diagonal.
+# and keep the SV diagonality bias visually obvious: lawn green = diagonal.
 DIRECTION_COLORS = {
     "diagonal": "#7CFC00",   # Lawn Green — vivid SV signature (Opta off-ball-run feel)
     "forward":  "#00FFFF",   # Cyan — vertical / progressive
