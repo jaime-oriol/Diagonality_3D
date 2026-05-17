@@ -935,7 +935,7 @@ match feed can carry.
 \section{Limitations and Future Work}
 \label{sec:limitations}
 
-Four limitations bound this work, each pointing at a next step.
+Five limitations bound this work, each pointing at a next step.
 \textbf{(1)} The sample is five matches --- the data released for the
 challenge --- and that is a limit on the \emph{input}, not on the method.
 The per-event tests are already well powered (thousands of actions), but
@@ -958,6 +958,32 @@ would test the reach-field formulation on its own terms. \textbf{(4)} The
 biomechanical constants --- the reaction-time gain, the change-of-direction
 amplitude --- are taken from the literature, not fitted to football
 tracking; fitting them on a larger sample would sharpen the surface.
+
+\textbf{(5)} The progression--safety trade-off of
+Sec.~\ref{sec:res-tradeoff} captures only half of risk: how often a pass
+is \emph{completed}, not how costly it is when lost. Orientation predicts
+these differ. By the mechanism of H1, a diagonal pass that is intercepted
+is won by a defender who was mis-oriented to it: he takes the ball turned
+across the play, not facing the goal he must now attack, and is poorly
+placed to counter, whereas a vertical pass is intercepted by a defender
+already facing forward and set to break at once. The diagonal should
+therefore be safe \emph{twice}: completed more often and, when lost, lost
+more cheaply. This is made precise by a risk-adjusted pass value,
+\begin{equation}
+  V \;=\; p_\mathrm{c}\,\Delta\mathrm{xT}_\mathrm{gain}
+       \;-\; (1-p_\mathrm{c})\,D_\mathrm{turnover}(\theta_\mathrm{int}),
+\end{equation}
+where $p_\mathrm{c}$ is the completion probability, $\Delta\mathrm{xT}_\mathrm{gain}$
+the threat gained on success, $D_\mathrm{turnover}$ the expected threat the
+opponent generates in a window after the interception, and
+$\theta_\mathrm{int}$ the interceptor's orientation misalignment (the angle
+between his body and the goal he now attacks). The conjecture is that
+diagonal deliveries both raise $p_\mathrm{c}$ and, by raising
+$\theta_\mathrm{int}$, lower $D_\mathrm{turnover}$, improving $V$ on both
+terms at once. Every quantity is measurable from the present data: the
+skeleton gives $\theta_\mathrm{int}$ at the interception frame and the
+event stream gives the post-turnover possession, making this a direct,
+falsifiable next test rather than a speculation.
 
 % =====================================================================
 \section{Conclusion}
