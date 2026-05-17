@@ -12,7 +12,6 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 from PIL import Image
 from pptx import Presentation
 from pptx.util import Inches
@@ -28,11 +27,9 @@ SLD.mkdir(exist_ok=True)
 
 # --- paleta -----------------------------------------------------------
 BG      = "#26282b"
-PANEL   = "#313332"
 WHITE   = "#f4f5f6"
 MUTE    = "#a8adb3"
 ACCENT  = "#3b82f6"   # corporate blue
-AMBER   = "#f0b450"
 
 plt.rcParams["font.family"] = "DejaVu Sans"
 
@@ -139,78 +136,13 @@ def slide1():
 
 
 # ====================================================================
-# SLIDE 2 -- pipeline
+# SLIDE 2 -- la infografia del pipeline, a sangre (solo el PNG)
 # ====================================================================
 def slide2():
     fig, ax = new_slide()
-    kicker(ax, "How it works")
-    title(ax, "One pipeline, four orientation-aware stages")
-
-    # chip de input
-    ax.add_patch(FancyBboxPatch((0.7, 6.05), 14.6, 0.7,
-                 boxstyle="round,pad=0.02,rounding_size=0.1",
-                 fc=PANEL, ec=MUTE, lw=1.2, zorder=3))
-    ax.text(8.0, 6.4, "INPUT   ·   3D skeleton, 21 keypoints @ 50 Hz   ·   "
-            "measured head / shoulder / hip orientation of every player",
-            color=WHITE, fontsize=13, ha="center", va="center", zorder=6)
-
-    stages = [
-        ("1  Vision", "Per-defender field of view.",
-         "Bekkers 120° cone, speed\ndecay, torso occlusion."),
-        ("2  Pitch Control", "What each player can reach.",
-         "Anisotropic reach field;\nblob collapses in blind spot."),
-        ("3  DOS Surface", "Danger from a blind defender.",
-         "Control gained going\ndiagonal vs straight."),
-        ("4  Scanning Gate", "Only what the player perceives.",
-         "2.5 s decayed memory —\nreal-time, actionable."),
-    ]
-    n = len(stages)
-    x0, x1 = 0.7, 15.3
-    gap = 0.45
-    bw = (x1 - x0 - gap * (n - 1)) / n
-    top, bot = 5.55, 3.05
-    centers = []
-    for i, (h, sub, body) in enumerate(stages):
-        bx = x0 + i * (bw + gap)
-        centers.append(bx + bw / 2)
-        ax.add_patch(FancyBboxPatch((bx, bot), bw, top - bot,
-                     boxstyle="round,pad=0.02,rounding_size=0.12",
-                     fc=PANEL, ec=ACCENT, lw=1.7, zorder=4))
-        ax.add_patch(plt.Rectangle((bx, top - 0.62), bw, 0.62, color=ACCENT,
-                     zorder=5))
-        ax.text(bx + bw / 2, top - 0.31, h, color="#10242e", fontsize=14.5,
-                fontweight="bold", ha="center", va="center", zorder=6)
-        ax.text(bx + bw / 2, top - 1.05, sub, color=WHITE, fontsize=11.3,
-                fontweight="bold", ha="center", va="center", zorder=6)
-        ax.text(bx + bw / 2, top - 1.85, body, color=MUTE, fontsize=10.3,
-                ha="center", va="center", zorder=6, linespacing=1.45)
-    # flechas entre cajas
-    for i in range(n - 1):
-        xa = x0 + i * (bw + gap) + bw
-        ax.add_patch(FancyArrowPatch((xa + 0.03, (top + bot) / 2),
-                     (xa + gap - 0.03, (top + bot) / 2),
-                     arrowstyle="-|>", mutation_scale=16, color=ACCENT, lw=2,
-                     zorder=6))
-
-    # banda de validacion
-    vy = 2.35
-    ax.add_patch(FancyBboxPatch((0.7, vy - 0.62), 14.6, 1.18,
-                 boxstyle="round,pad=0.02,rounding_size=0.1",
-                 fc="#2c2620", ec=AMBER, lw=1.5, zorder=3))
-    ax.text(0.95, vy + 0.2, "VALIDATION ARM", color=AMBER, fontsize=12.5,
-            fontweight="bold", va="center", zorder=6)
-    ax.text(0.95, vy - 0.22,
-            "H1 perception  ·  H2 bi-axial disruption  ·  H3 receiver advantage"
-            "  ·  H4 progression–safety trade-off",
-            color=WHITE, fontsize=11.5, va="center", zorder=6)
-    ax.text(15.05, vy, "6,923 actions\n2,354 off-ball runs\ntheory holds",
-            color=AMBER, fontsize=11, ha="right", va="center",
-            fontweight="bold", zorder=6, linespacing=1.4)
-
-    ax.text(8.0, 1.05, "Skeleton geometry only — the DOS model never sees a goal, "
-            "an xG, an xT or an outcome label.",
-            color=MUTE, fontsize=11.5, ha="center", va="center", zorder=6)
-    footer(ax, 2)
+    img = plt.imread(str(FIG / "pipeline.png"))
+    # pipeline.png es 16:9 -> ocupa la slide entera, sin texto ni chrome.
+    ax.imshow(img, extent=[0, GX, 0, GY], zorder=5, aspect="auto")
     return save(fig, "slide2.png"), None
 
 

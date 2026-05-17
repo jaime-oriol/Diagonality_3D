@@ -515,7 +515,20 @@ those two diverge for a defender facing the wrong way
 ball can actually perceive, turning a god-eye statistic into a real-time
 decision aid. DOS is \emph{action-independent}: the same routine scores a
 pass, a carry, a take-on or an off-ball run, because all four reduce to an
-origin and a direction.
+origin and a direction. Figure~\ref{fig:pipeline} shows the pipeline end
+to end.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{pipeline.png}
+  \caption{\textbf{The Diagonality pipeline.} The 3D skeleton of every
+  player feeds two orientation-aware models: a per-defender vision model
+  (what each player can see) and an orientation-aware pitch-control
+  function (what each player can reach). The two fuse into the Diagonal
+  Opportunity Surface, a real-time map of where a diagonal delivery breaks
+  a defender who cannot see it.}
+  \label{fig:pipeline}
+\end{figure}
 
 \subsection{What the player sees --- the vision model}
 \label{sec:vision}
