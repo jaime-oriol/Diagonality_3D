@@ -80,6 +80,7 @@ Diagonality_3D/
 │   └── figures/                  # Figures used in the PDF
 │
 ├── submission/                   # Submission artefacts
+│   ├── presentation_video.mp4    # 3-minute demo video
 │   ├── executive_summary.pdf     # 5-slide executive summary
 │   ├── executive_summary.pptx    # ... with the hero videos embedded
 │   ├── prfaq.pdf                 # Compiled PR/FAQ
