@@ -110,25 +110,33 @@ def slide1():
             ha="center", va="center", zorder=6)
 
     # Titulo en dos niveles
-    ax.text(cx, 5.70, "Diagonality", color=WHITE, fontsize=56,
+    ax.text(cx, 5.85, "Diagonality", color=WHITE, fontsize=56,
             fontweight="bold", ha="center", va="center", zorder=6)
-    ax.text(cx, 4.58, "The Best of Both Worlds", color=ACCENT,
+    ax.text(cx, 4.74, "The Best of Both Worlds", color=ACCENT,
             fontsize=26, ha="center", va="center", zorder=6)
 
     # Regla fina de acento
-    ax.add_patch(plt.Rectangle((cx - 1.5, 3.92), 3.0, 0.03,
+    ax.add_patch(plt.Rectangle((cx - 1.5, 4.10), 3.0, 0.03,
                                color=ACCENT, zorder=6))
 
-    # Una linea: que es esto, nada mas
-    ax.text(cx, 3.22,
-            "We test whether diagonal play really works,",
-            color=WHITE, fontsize=14, ha="center", va="center", zorder=6)
-    ax.text(cx, 2.74,
-            "and turn it into a live map. Built on 3D skeleton tracking.",
-            color=WHITE, fontsize=14, ha="center", va="center", zorder=6)
+    # La teoria: el blog Spielverlagerung y su tesis central
+    ax.text(cx, 3.42,
+            "The tactical blog Spielverlagerung argues the diagonal is football's optimum:",
+            color=WHITE, fontsize=13.5, ha="center", va="center", zorder=6)
+    ax.text(cx, 2.98,
+            "the progression of a vertical pass with the safety of a horizontal one.",
+            color=WHITE, fontsize=13.5, ha="center", va="center", zorder=6)
+
+    # Que hacemos nosotros
+    ax.text(cx, 2.22,
+            "We put that theory to the test on 3D skeleton data,",
+            color=WHITE, fontsize=13.5, ha="center", va="center", zorder=6)
+    ax.text(cx, 1.78,
+            "and turn it into a live map of where to attack.",
+            color=WHITE, fontsize=13.5, ha="center", va="center", zorder=6)
 
     # Autor
-    ax.text(cx, 1.45, "Jaime Oriol", color=WHITE, fontsize=13,
+    ax.text(cx, 0.92, "Jaime Oriol", color=WHITE, fontsize=13,
             ha="center", va="center", zorder=6)
 
     footer(ax, 1)
