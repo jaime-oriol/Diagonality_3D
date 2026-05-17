@@ -50,7 +50,7 @@ def new_slide():
 
 
 def footer(ax, page):
-    ax.text(0.55, 0.42, "Diagonality — The Best of Both Worlds",
+    ax.text(0.55, 0.42, "Diagonality · The Best of Both Worlds",
             color=MUTE, fontsize=10, va="center", zorder=6)
     ax.text(GX - 0.55, 0.42, f"{page} / 5", color=MUTE, fontsize=10,
             ha="right", va="center", zorder=6)
@@ -119,12 +119,12 @@ def slide1():
     ax.add_patch(plt.Rectangle((cx - 1.5, 3.92), 3.0, 0.03,
                                color=ACCENT, zorder=6))
 
-    # Una linea — que es esto, nada mas
+    # Una linea: que es esto, nada mas
     ax.text(cx, 3.22,
-            "Testing the tactical theory of diagonality — and turning it into",
+            "We test whether diagonal play really works,",
             color=WHITE, fontsize=14, ha="center", va="center", zorder=6)
     ax.text(cx, 2.74,
-            "a real-time, orientation-aware map — from 3D skeleton tracking.",
+            "and turn it into a live map. Built on 3D skeleton tracking.",
             color=WHITE, fontsize=14, ha="center", va="center", zorder=6)
 
     # Autor
@@ -179,20 +179,20 @@ def main():
     slides = [
         slide1(),
         slide2(),
-        video_slide(3, "Stage 1 — Vision",
+        video_slide(3, "Stage 1 · Vision",
                     "What every player can see",
-                    "Probabilistic field of view: a 120° cone on the measured head "
-                    "yaw, speed-dependent decay, torso occlusion from real shoulder widths.",
+                    "A 120° cone of vision built from where each player is really "
+                    "looking. It narrows when they sprint, and other players block the view.",
                     "Vision.png", "Vision_Video.mp4"),
-        video_slide(4, "Stage 2 — Pitch Control",
+        video_slide(4, "Stage 2 · Pitch Control",
                     "What every player can reach",
-                    "Each player an anisotropic reach field — the blob collapses in a "
-                    "defender's blind spot, a literal hole in his control of space.",
+                    "How much ground a player covers depends on which way he faces. "
+                    "Behind his shoulder it shrinks, leaving a real gap in the defence.",
                     "PPCF.png", "PPCF_Video.mp4"),
-        video_slide(5, "Stages 3–4 — DOS",
+        video_slide(5, "Stage 3 · DOS",
                     "The Diagonal Opportunity Surface",
-                    "Extra control bought going diagonal vs straight, gated to what the "
-                    "on-ball player perceives. Cyan: seen now. Amber: opportunity lost track of.",
+                    "The extra space a diagonal pass opens up, shown only where the player "
+                    "on the ball can actually see it. Cyan: he sees it. Amber: he lost track of it.",
                     "DOS.png", "DOS_Video.mp4"),
     ]
 
