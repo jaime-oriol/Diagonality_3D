@@ -33,18 +33,25 @@ matches.
 
 ## Hero renders — Kane goal 5 (Bayern Munich 5–0 Hamburger SV, 13 Sept 2025)
 
+The four-stage pipeline at a glance:
+
+![Pipeline overview](deliverable/figures/pipeline.png)
+
 The full 35-second window of Bayern's fifth goal, rendered with the
-LIGHT OPTA palette and the Telstar ball. Each thumbnail is the static
-poster at the action frame; click through for the full 50 fps MP4.
+LIGHT OPTA palette and the Telstar ball. Each poster is the static
+frame at 14.92 s of its MP4; click the image for the full 50 fps video.
 
-| Stage 1 · Vision | Stage 2 · Pitch Control | Stage 3 · DOS |
-| :---: | :---: | :---: |
-| [![Vision frame](deliverable/figures/Vision.png)](results/renders/vision_kane_goal5.mp4) | [![PPCF frame](deliverable/figures/PPCF.png)](results/renders/ppcf_kane_goal5.mp4) | [![DOS frame](deliverable/figures/DOS.png)](results/renders/dos_kane_goal5.mp4) |
-| Bekkers FOV cone per defender + Kane scanning | Orientation-aware reach field (blind-side gap visible) | Diagonal Opportunity Surface + shadow layer |
+**Stage 1 · Vision** — Bekkers FOV cone per defender + Kane scanning.
 
-The matching player pass map for Michael Olise across the same fixture
-is rendered with the same identity:
-[![Olise pass map](results/renders/passes_olise_Bayern_Hamburg.png)](results/renders/passes_olise_Bayern_Hamburg.png)
+[![Vision frame](deliverable/figures/Vision.png)](results/renders/vision_kane_goal5.mp4)
+
+**Stage 2 · Orientation-Aware Pitch Control** — reach field with the blind-side gap visible.
+
+[![PPCF frame](deliverable/figures/PPCF.png)](results/renders/ppcf_kane_goal5.mp4)
+
+**Stage 3 · Diagonal Opportunity Surface** — DOS with the shadow layer over the on-ball player's forward cone.
+
+[![DOS frame](deliverable/figures/DOS.png)](results/renders/dos_kane_goal5.mp4)
 
 ---
 
