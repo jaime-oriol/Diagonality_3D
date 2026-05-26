@@ -9,6 +9,7 @@ Slides: 1 intro diagonalidad, 2 pipeline, 3 Vision, 4 PPCF, 5 DOS.
 Ejecutar desde la raiz del repo:  python3 deliverable/make_exec_summary.py
 """
 from pathlib import Path
+import sys
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -17,21 +18,27 @@ from pptx import Presentation
 from pptx.util import Inches
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+import src.viz.common as _vc        # registra Chakra Petch + rcParams base   # noqa: E402
+
 FIG  = ROOT / "deliverable" / "figures"
 VID  = ROOT / "figures" / "videos"
-LOGO = ROOT / "figures" / "logos" / "Logo.png"
+LOGO = ROOT / "figures" / "logos" / "jo_logo.png"     # CCV-style JO logo
 OUT  = ROOT / "submission"
 SLD  = FIG / "exec_slides"
 OUT.mkdir(exist_ok=True)
 SLD.mkdir(exist_ok=True)
 
-# --- paleta -----------------------------------------------------------
-BG      = "#26282b"
-WHITE   = "#f4f5f6"
-MUTE    = "#a8adb3"
-ACCENT  = "#3b82f6"   # corporate blue
+# --- Paleta LIGHT OPTA (CCV identity) ---------------------------------
+BG      = "#ffffff"   # blanco puro
+WHITE   = "#000000"   # alias retro-compat: codigo abajo usa WHITE para texto principal -> negro
+MUTE    = "#666666"   # leyenda / muted text
+ACCENT  = "#3b82f6"   # corporate blue (mismo ATT del common.py)
 
-plt.rcParams["font.family"] = "DejaVu Sans"
+# Chakra Petch ya esta registrado al importar src.viz.common; aqui solo
+# fijamos la familia activa.
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["font.sans-serif"] = _vc.FONT_STACK
 
 # slide en unidades de grid 16 x 9
 GX, GY = 16.0, 9.0
@@ -75,7 +82,7 @@ def place_image(ax, path, x0, x1, y0, y1, z=5):
     ex = [cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2]
     ax.imshow(img, extent=ex, zorder=z, aspect="auto")
     ax.add_patch(plt.Rectangle((ex[0], ex[2]), ex[1] - ex[0], ex[3] - ex[2],
-                 fill=False, ec="#000000", lw=1.2, zorder=z + 1))
+                 fill=False, ec="#dddddd", lw=1.0, zorder=z + 1))
     return ex  # [left, right, bottom, top]
 
 

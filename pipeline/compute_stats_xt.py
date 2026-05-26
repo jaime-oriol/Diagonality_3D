@@ -25,6 +25,10 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
+from src.viz.common import ATT as _ATT, DEF as _DEF, LEGEND as _LEGEND  # noqa: E402  registra rcParams + Chakra Petch
 from scipy.stats import mannwhitneyu, pearsonr, spearmanr
 import statsmodels.api as sm
 
@@ -158,9 +162,9 @@ def _plot_quintiles(quintiles: pd.DataFrame, out_path: Path):
     labels = list(quintiles.index)
     x = np.arange(len(labels))
     metrics = [
-        ("outcome_mean", "Mean xT-based outcome", "tab:blue"),
-        ("outcome_pos_rate", "Outcome > 0 rate", "tab:orange"),
-        ("dos_mean", "DOS mean (sanity)", "tab:gray"),
+        ("outcome_mean", "Mean xT-based outcome", _ATT),       # azul brand
+        ("outcome_pos_rate", "Outcome > 0 rate", _DEF),         # rojo brand
+        ("dos_mean", "DOS mean (sanity)", _LEGEND),             # gris medio
     ]
     for ax, (col, title, color) in zip(axes, metrics):
         ax.bar(x, quintiles[col].values, color=color, alpha=0.85)

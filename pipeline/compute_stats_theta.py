@@ -35,6 +35,10 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
+from src.viz.common import BG as _BG, DIRECTION_COLORS as _DC  # noqa: E402  registra rcParams + Chakra Petch
 from scipy.stats import mannwhitneyu
 
 
@@ -145,7 +149,8 @@ def _plot_axes(df: pd.DataFrame, out_path: Path):
     if len(pas) == 0:
         return
     fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
-    colors = {"forward": "#00BFFF", "diagonal": "#7CFC00", "sideways": "#FFFFFF"}
+    colors = {"forward": _DC["forward"], "diagonal": _DC["diagonal"],
+              "sideways": _DC["sideways"]}
     classes = ["forward", "diagonal", "sideways"]
 
     # 1: defender shoulder misalignment distribution
@@ -161,7 +166,7 @@ def _plot_axes(df: pd.DataFrame, out_path: Path):
     ax.set_title("Axis 1: Defender disruption")
     ax.legend(loc="upper right")
     ax.grid(alpha=0.3)
-    ax.set_facecolor("#313332")
+    ax.set_facecolor(_BG)
 
     # 2: receiver_turn_needed distribution
     ax = axes[1]
@@ -176,7 +181,7 @@ def _plot_axes(df: pd.DataFrame, out_path: Path):
     ax.set_title("Axis 2: Receiver advantage (lower = better)")
     ax.legend(loc="upper right")
     ax.grid(alpha=0.3)
-    ax.set_facecolor("#313332")
+    ax.set_facecolor(_BG)
 
     # 3: n_teammates_in_fov distribution
     ax = axes[2]
@@ -192,9 +197,9 @@ def _plot_axes(df: pd.DataFrame, out_path: Path):
     ax.set_title("Axis 2b: Receiver options")
     ax.legend(loc="upper right")
     ax.grid(alpha=0.3)
-    ax.set_facecolor("#313332")
+    ax.set_facecolor(_BG)
 
-    fig.set_facecolor("#313332")
+    fig.set_facecolor(_BG)
     fig.tight_layout()
     fig.savefig(out_path, dpi=160, bbox_inches="tight",
                 facecolor=fig.get_facecolor())

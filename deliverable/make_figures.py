@@ -3,10 +3,10 @@ make_figures.py - Brand-style analytical figures for the "Diagonality"
 deliverable.
 
 Reads the validated event table (dos_validation_full.csv, 6,923 events)
-and renders the analytical figures in the project's visual identity:
-dark #313332 background, the project's vivid palette and a single
-standardized 3-colour scheme for the direction classes (forward, diagonal,
-sideways) reused across every figure — defined once in src/viz/common.py.
+and renders the analytical figures in the project's LIGHT OPTA identity:
+white background, Chakra Petch font, JO brand mark, vivid 4-colour
+direction scheme (emerald / blue / amber / rose / violet — defined once
+in src/viz/common.py).
 
 Output -> deliverable/figures/
 Run:  source ~/anaconda3/bin/activate ritmo && python3 deliverable/make_figures.py
@@ -26,22 +26,26 @@ from scipy.stats import binomtest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from src.viz.common import BG, WHITE, DIRECTION_COLORS, DOS_CMAP, PKW  # noqa: E402
+from src.viz.common import BG, TEXT, LEGEND, GRID, DIRECTION_COLORS, DOS_CMAP, PKW  # noqa: E402
+
+# Alias retro-compat: el codigo abajo usa WHITE como "color principal"
+# (texto, edges). En la identidad LIGHT OPTA, WHITE -> TEXT (#000000).
+WHITE = TEXT
 
 CSV  = ROOT / "results" / "datasets" / "dos_validation_full.csv"
 OUT  = ROOT / "deliverable" / "figures"
-LOGO = ROOT / "figures" / "logos" / "Logo.png"
+LOGO = ROOT / "figures" / "logos" / "jo_logo.png"     # CCV-style JO logo
 
 SUCCESS = {"successfullyCompleted", "successful"}
 CLASSES = ["forward", "diagonal", "sideways"]
 CLABEL  = {"forward": "Forward", "diagonal": "Diagonal", "sideways": "Sideways"}
 
-# Standardized 3-colour scheme — forward / diagonal / sideways — used in
-# EVERY figure, identical to src/viz/common.py (and the player pass maps):
-#   diagonal = lawn green (the SV signature), forward = cyan, sideways = white.
+# Standardized 3-colour scheme — bright palette via src/viz/common.py.
 COL  = {c: DIRECTION_COLORS[c] for c in CLASSES}
-GRID = "#4a4c4b"
-PE_S = [pe.withStroke(linewidth=2.6, foreground=BG)]   # text on busy areas
+# Halo blanco fino para texto sobre zonas saturadas (BG es blanco -> halo
+# blanco DOESN'T contrast; usamos halo NEGRO para sobrepuestas en barras vivas).
+PE_S = [pe.withStroke(linewidth=2.6, foreground=BG)]
+PE_B = [pe.withStroke(linewidth=2.2, foreground="black")]  # halo negro para texto blanco encima de barras
 
 plt.rcParams.update({"font.size": 12, "axes.titlesize": 13,
                      "axes.labelsize": 11.5})
@@ -130,7 +134,7 @@ def fig_tradeoff(df):
                     fontweight="bold", path_effects=PE_S)
         ax.annotate(f"{r['gain']:.0f}% positive xT   .   n = {r['n']:,}",
                     (x, y), (0, s * 18), textcoords="offset points",
-                    ha="center", va=va, color="#c8c8c8", fontsize=9.5)
+                    ha="center", va=va, color=LEGEND, fontsize=9.5)
 
     ax.set_xlabel("Progression  —  mean expected-threat gain (milli-xT per action)")
     ax.set_ylabel("Safety  —  possession retained (%)")

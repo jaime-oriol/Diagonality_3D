@@ -28,6 +28,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from src.viz.common import BG as _BG, DIRECTION_COLORS as _DC  # registra rcParams + Chakra Petch
 from scipy.stats import mannwhitneyu, spearmanr, kruskal
 
 import statsmodels.api as sm
@@ -220,8 +221,8 @@ def _plot_axes(df: pd.DataFrame, out_path: Path, w: str = W):
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     # Left: scatter |PC1| vs |PC2| colored by direction class
     ax = axes[0]
-    colors = {"forward": "#00BFFF", "diagonal": "#7CFC00",
-              "sideways": "#FFFFFF", "backward": "#FF1493"}
+    colors = {"forward": _DC["forward"], "diagonal": _DC["diagonal"],
+              "sideways": _DC["sideways"], "backward": _DC["backward"]}
     for cls, g in df.groupby("direction_class"):
         if cls in colors:
             ax.scatter(g[f"pc1_{w}"].abs(), g[f"pc2_{w}"].abs(),
@@ -243,7 +244,7 @@ def _plot_axes(df: pd.DataFrame, out_path: Path, w: str = W):
     ax.set_xlim(0, lim); ax.set_ylim(0, lim)
     ax.legend(loc="upper right", facecolor="white")
     ax.grid(alpha=0.3)
-    ax.set_facecolor("#313332")
+    ax.set_facecolor(_BG)
 
     # Right: bi-axial balance distribution per class
     ax = axes[1]
@@ -257,11 +258,11 @@ def _plot_axes(df: pd.DataFrame, out_path: Path, w: str = W):
     ax.set_ylabel("Count")
     ax.set_title("Distribution of bi-axial balance by direction class\n"
                  "(higher = both axes disrupted simultaneously)")
-    ax.set_facecolor("#313332")
+    ax.set_facecolor(_BG)
     ax.legend()
     ax.grid(alpha=0.3)
 
-    fig.set_facecolor("#313332")
+    fig.set_facecolor(_BG)
     fig.tight_layout()
     fig.savefig(out_path, dpi=160, bbox_inches="tight",
                 facecolor=fig.get_facecolor())
