@@ -31,7 +31,7 @@ matches.
 
 ---
 
-## Hero renders — Kane goal 5 (Bayern Munich 5–0 Hamburger SV, 13 Sept 2025)
+## TOP Renders
 
 The four-stage pipeline at a glance:
 
@@ -43,15 +43,15 @@ frame at 14.92 s of its MP4; click the image for the full 50 fps video.
 
 **Stage 1 · Vision** — Bekkers FOV cone per defender + Kane scanning.
 
-[![Vision frame](deliverable/figures/Vision.png)](results/renders/vision_kane_goal5.mp4)
+[![Vision frame](deliverable/figures/Vision.png)](results/renders/vision_kane_goal5_web.mp4)
 
 **Stage 2 · Orientation-Aware Pitch Control** — reach field with the blind-side gap visible.
 
-[![PPCF frame](deliverable/figures/PPCF.png)](results/renders/ppcf_kane_goal5.mp4)
+[![PPCF frame](deliverable/figures/PPCF.png)](results/renders/ppcf_kane_goal5_web.mp4)
 
 **Stage 3 · Diagonal Opportunity Surface** — DOS with the shadow layer over the on-ball player's forward cone.
 
-[![DOS frame](deliverable/figures/DOS.png)](results/renders/dos_kane_goal5.mp4)
+[![DOS frame](deliverable/figures/DOS.png)](results/renders/dos_kane_goal5_web.mp4)
 
 ---
 
