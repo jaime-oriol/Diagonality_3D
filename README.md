@@ -43,15 +43,18 @@ frame at 14.92 s of its MP4; click the image for the full 50 fps video.
 
 **Stage 1 · Vision** — Bekkers FOV cone per defender + Kane scanning.
 
-[![Vision frame](deliverable/figures/Vision.png)](results/renders/vision_kane_goal5_web.mp4)
+![Vision render](results/renders/vision_kane_goal5.gif)
 
 **Stage 2 · Orientation-Aware Pitch Control** — reach field with the blind-side gap visible.
 
-[![PPCF frame](deliverable/figures/PPCF.png)](results/renders/ppcf_kane_goal5_web.mp4)
+![PPCF render](results/renders/ppcf_kane_goal5.gif)
 
 **Stage 3 · Diagonal Opportunity Surface** — DOS with the shadow layer over the on-ball player's forward cone.
 
-[![DOS frame](deliverable/figures/DOS.png)](results/renders/dos_kane_goal5_web.mp4)
+![DOS render](results/renders/dos_kane_goal5.gif)
+
+> Full-quality MP4s (50 fps, 35 s, ~10 MB each) live in
+> [`results/renders/`](results/renders/) and embedded in the executive PPTX.
 
 ---
 
