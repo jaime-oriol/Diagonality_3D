@@ -1,25 +1,23 @@
-"""
-passes_plot — Player-pass visualization in our brand style.
+"""passes_plot — Player-pass visualization en identidad LIGHT OPTA / CCV.
 
-Inspired by the Opta Analyst player-pass figure but adapted to the
-project's dark theme + the Diagonality-3D narrative:
+Mismo concepto que la viz original (flechas coloreadas por direction_class,
+footer 3-bloques con leyenda de tipos + direccion + stats) pero migrada al
+estilo CCV: fondo blanco, lineas negras, tipografia Chakra Petch, logo JO
+en el header via draw_header de common.
 
-  - Pass arrows colored by **direction class** (lawn green = diagonal,
-    the SV signature) instead of just success.
-  - Unsuccessful passes use the SAME class colour but a dashed line at
-    lower alpha — the per-class density stays readable.
-  - Header and footer are anchored to the **exact horizontal extent of
-    the pitch** via absolute axis positioning, so the figure feels
-    grid-aligned regardless of figsize.
-  - Footer = 3 uniform blocks: 2x2 direction legend, attacking-direction
-    triangles, Opta-style outlined number-in-circle stats with diagonal
-    share highlighted in lawn green.
+Cambios respecto al render dark:
+  - Header: escudo del equipo IZQ + titulo + subtitulo (1 o N lineas) +
+    logo JO DCHA, todo dibujado por common.draw_header. Sin axes propio.
+  - Pass arrows en DIRECTION_COLORS (verde diagonal, azul forward, gris
+    sideways, rosa backward) — todos legibles sobre BG blanco.
+  - Footer mantiene 40/20/40, pero usa LEGEND para textos suaves y TEXT
+    para numeros / acentos.
 
-Schema expected for the passes DataFrame (one row per pass):
-    x, y                 — origin in TRACAB meters (centered, [-52.5, 52.5])
-    x_receiver, y_receiver — destination in meters
-    direction_class      — "forward" | "diagonal" | "sideways" | "backward"
-    successful           — bool (True if completed)
+Schema esperado del DataFrame (one row per pass):
+    x, y                  — origen en TRACAB metros (centrado, [-52.5, 52.5])
+    x_receiver, y_receiver — destino en metros
+    direction_class       — "forward" | "diagonal" | "sideways" | "backward"
+    successful            — bool (True si completed)
 """
 
 from pathlib import Path
@@ -29,89 +27,69 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.patches import FancyArrowPatch, Circle
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from matplotlib.patches import FancyArrowPatch, Ellipse
 from mplsoccer import Pitch
 
 from .common import (
-    BG, WHITE, PKW, DIRECTION_COLORS,
+    BG, TEXT, LEGEND, PKW, DIRECTION_COLORS,
+    PITCH_LENGTH, PITCH_WIDTH, draw_header,
 )
-import matplotlib.font_manager as _fm
-
-# Try to use Inter (Opta-like aesthetic). Fall back to DejaVu Sans
-# (always present) if Inter is not installed in the system fonts.
-def _resolve_font():
-    """Try to register Inter from any of the standard user-font locations.
-    Falls back to DejaVu Sans (always present) if Inter is not installed."""
-    try:
-        font_dir = Path.home() / ".local" / "share" / "fonts"
-        if font_dir.exists():
-            for ttf in font_dir.glob("Inter-*.ttf"):
-                try: _fm.fontManager.addfont(str(ttf))
-                except Exception: pass
-        names = {f.name for f in _fm.fontManager.ttflist}
-        if "Inter" in names:
-            return "Inter"
-    except Exception:
-        pass
-    return "DejaVu Sans"
-
-FONT = _resolve_font()
 
 
-# ── Geometry: pitch-aligned absolute layout (figsize-aware) ────────────
-# Pitch true aspect = 105 / 68 = 1.544. We size the pitch axis to that
-# exact ratio so mplsoccer fills it edge-to-edge, no internal margins.
-# Header and footer share the SAME horizontal extent as the pitch.
+# ── Geometry: pitch-aligned absolute layout ────────────────────────────
+# Replicando el patron del PPCF de CCV: el ancho de la figura coincide con
+# el ancho del campo (sin margenes laterales) y header/footer ocupan el
+# mismo ancho horizontal. El alto del axes del pitch se deriva del ratio
+# datos = (pitch_length + 2·margin_x) / (pitch_width + 2·margin_y) pa que
+# set_aspect("equal") encaje sin huecos.
 
-FIGSIZE = (14.0, 9.5)
-PITCH_RATIO = 105.0 / 68.0   # ~1.544
+FIG_W            = 14.0
+HEADER_H_IN      = 1.10
+FOOTER_H_IN      = 1.30
+PAD_TOP_IN       = 0.05
+PAD_HDR_PITCH_IN = 0.05
+PAD_PCH_FTR_IN   = 0.05
+PAD_BOT_IN       = 0.10
+PITCH_MARGIN_Y_M = 1.0
+PITCH_MARGIN_X_M = 2.0      # >=1.5 pa porterias
 
-# Fractions of the figure height
-H_HEADER = 0.10
-H_PITCH = 0.70
-H_FOOTER = 0.16
-# Vertical spacing — header + footer flush against the pitch (Opta-style)
-PAD_TOP = 0.015
-PAD_HEADER_PITCH = 0.0
-PAD_PITCH_FOOTER = 0.005
-PAD_BOTTOM = 0.020
+_DATA_RATIO = (PITCH_LENGTH + 2 * PITCH_MARGIN_X_M) / (PITCH_WIDTH + 2 * PITCH_MARGIN_Y_M)
+PITCH_H_IN  = FIG_W / _DATA_RATIO
 
-# Compute pitch horizontal span from the height ratio so it stays edge-
-# aligned with header/footer (constant `pitch_w` as a fraction of figure).
-def _layout(figsize=FIGSIZE):
-    fw, fh = figsize
-    pitch_h_in = H_PITCH * fh
-    pitch_w_in = pitch_h_in * PITCH_RATIO
-    pitch_w_frac = pitch_w_in / fw
-    left = (1.0 - pitch_w_frac) / 2.0
-    right = left + pitch_w_frac
+FIG_H = (PAD_TOP_IN + HEADER_H_IN + PAD_HDR_PITCH_IN
+         + PITCH_H_IN + PAD_PCH_FTR_IN
+         + FOOTER_H_IN + PAD_BOT_IN)
 
-    y_footer_bot = PAD_BOTTOM
-    y_footer_top = y_footer_bot + H_FOOTER
-    y_pitch_bot = y_footer_top + PAD_PITCH_FOOTER
-    y_pitch_top = y_pitch_bot + H_PITCH
-    y_header_bot = y_pitch_top + PAD_HEADER_PITCH
-    y_header_top = y_header_bot + H_HEADER
+FIGSIZE = (FIG_W, FIG_H)
 
-    # Sanity check: should be <= 1 - PAD_TOP
-    assert y_header_top <= 1.0 - PAD_TOP + 1e-6, (
-        f"layout overflows: header_top={y_header_top}")
 
+def _layout(figsize: tuple = FIGSIZE) -> dict:
+    """Posiciones absolutas de header/pitch/footer (frac fig)."""
+    _, fh = figsize
+    h_hdr = HEADER_H_IN      / fh
+    h_pch = PITCH_H_IN       / fh
+    h_ftr = FOOTER_H_IN      / fh
+    p_hp  = PAD_HDR_PITCH_IN / fh
+    p_pf  = PAD_PCH_FTR_IN   / fh
+    p_bot = PAD_BOT_IN       / fh
+
+    y_ftr_bot = p_bot
+    y_pch_bot = y_ftr_bot + h_ftr + p_pf
+    y_pch_top = y_pch_bot + h_pch
+    y_hdr_bot = y_pch_top + p_hp
     return {
-        "left": left, "right": right, "width": pitch_w_frac,
-        "header": (left, y_header_bot, pitch_w_frac, H_HEADER),
-        "pitch":  (left, y_pitch_bot, pitch_w_frac, H_PITCH),
-        "footer": (left, y_footer_bot, pitch_w_frac, H_FOOTER),
+        "left": 0.0, "width": 1.0,
+        "header": (0.0, y_hdr_bot, 1.0, h_hdr),
+        "pitch":  (0.0, y_pch_bot, 1.0, h_pch),
+        "footer": (0.0, y_ftr_bot, 1.0, h_ftr),
     }
 
 
-# ── Visual constants for arrows + footer ───────────────────────────────
+# ── Visual constants ────────────────────────────────────────────────────
 
 ARROW_LW = 1.4
 ARROW_ALPHA_OK = 0.95
 ARROW_ALPHA_FAIL = 0.55
-# Open-style arrow head (two strokes meeting at a point — like Opta's `→`)
 ARROW_STYLE = "->,head_length=5,head_width=4"
 
 DIRECTION_ORDER = ["diagonal", "forward", "sideways", "backward"]
@@ -125,13 +103,11 @@ DIRECTION_LABELS = {
 
 # ── Pass arrows ────────────────────────────────────────────────────────
 
-def _draw_pass_arrow(
-    ax: plt.Axes,
-    x0: float, y0: float, x1: float, y1: float,
-    color: str, successful: bool,
-):
+def _draw_pass_arrow(ax: plt.Axes,
+                     x0: float, y0: float, x1: float, y1: float,
+                     color: str, successful: bool):
     """One pass = thin Opta-style arrow. Solid for OK, dashed + faded
-    for fail. Same color either way so the per-class density reads."""
+    for fail. Same color either way so per-class density reads."""
     style = "-" if successful else (0, (3, 2))
     alpha = ARROW_ALPHA_OK if successful else ARROW_ALPHA_FAIL
     arrow = FancyArrowPatch(
@@ -145,91 +121,10 @@ def _draw_pass_arrow(
     ax.add_patch(arrow)
 
 
-# ── Header ─────────────────────────────────────────────────────────────
-
-def _draw_header(
-    ax: plt.Axes,
-    title: str, subtitle: str,
-    team_logo_path: Optional[str] = None,
-    project_logo_path: Optional[str] = None,
-):
-    """Top strip aligned to pitch width: optional team logo (left edge),
-    title + subtitle (left), optional project logo (right edge)."""
-    ax.set_facecolor(BG)
-    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
-    ax.set_xticks([]); ax.set_yticks([])
-    for s in ax.spines.values():
-        s.set_visible(False)
-
-    text_x = 0.125
-    if team_logo_path is not None and Path(team_logo_path).exists():
-        try:
-            img = plt.imread(team_logo_path)
-            ab = AnnotationBbox(
-                OffsetImage(img, zoom=0.45),
-                (0.0, 0.50), frameon=False,      # X ↑ → escudo a la DERECHA / X ↓ → IZQ (mantén dentro de [0,1])
-                box_alignment=(0.0, 0.5),         # ancla LEFT-EDGE del logo en X
-            )
-            ab.set_clip_on(False)                 # permite render fuera del axes si X<0 o X>1
-            ax.add_artist(ab)
-            text_x = 0.1
-        except Exception:
-            pass
-
-    # Subtitle puede ser str (1 línea) o list/tuple (N líneas).
-    # Spacing visualmente uniforme: el título es fontsize 25 (ocupa más
-    # altura visible) que los subs (fontsize 15), así que el gap
-    # title→sub1 debe ser MAYOR que sub1→sub2 para que el espacio en
-    # blanco entre líneas sea el mismo a la vista.
-    sub_lines = list(subtitle) if isinstance(subtitle, (list, tuple)) else [subtitle]
-    n_sub = len(sub_lines)
-    title_y       = 0.82 if n_sub >= 2 else 0.55  # ↑ → título más alto
-    gap_title_sub = 0.36   # ↑ → más espacio entre TÍTULO y sub1
-    gap_sub_sub   = 0.26   # ↑ → más espacio entre sub1 y sub2
-
-    ax.text(
-        text_x, title_y, title, color=WHITE,
-        fontsize=25, fontweight="bold", fontfamily=FONT,
-        ha="left", va="center",
-    )
-    y = title_y
-    for i, line in enumerate(sub_lines):
-        y -= gap_title_sub if i == 0 else gap_sub_sub  # 1er sub usa gap mayor; resto, gap entre subs
-        ax.text(
-            text_x, y, line, color=WHITE,
-            fontsize=15, fontweight="normal", fontfamily=FONT,
-            ha="left", va="center", alpha=0.85,
-        )
-
-    if project_logo_path is not None and Path(project_logo_path).exists():
-        try:
-            img = plt.imread(project_logo_path)
-            # Auto-zoom so the rendered logo has the same visual height
-            # regardless of the source PNG resolution. Target ≈ 48 px tall.
-            TARGET_HEIGHT_PX = 48
-            zoom = TARGET_HEIGHT_PX / float(img.shape[0])
-            ab = AnnotationBbox(
-                OffsetImage(img, zoom=zoom),
-                (1.0, 0.42), frameon=False,      # X ↑ → logo a la DERECHA (mantén dentro de [0,1]) / Y ↓ → MÁS ABAJO
-                box_alignment=(1.0, 0.5),         # ancla RIGHT-EDGE del logo en X
-            )
-            ab.set_clip_on(False)                 # permite render fuera del axes si X>1
-            ax.add_artist(ab)
-        except Exception:
-            pass
-
-
-# ── Footer (Opta-Forum-style figure-coord legend) ───────────────────────
-# Following the exact pattern of Jaime's Opta Forum common.py:
-#   - All elements positioned in FIGURE coordinates via fig.transFigure.
-#   - Real circles via `Ellipse(cw, ch)` with cw=2r/W, ch=2r/H so they
-#     stay round regardless of axis aspect.
-#   - Each block: header (fontsize 14 bold) on top, symbol(s) in middle,
-#     label(s) below symbol — same vertical rhythm as the "Off-Ball Run"
-#     entry of the Opta Forum legend.
+# ── Footer (3 bloques 40/20/40) ────────────────────────────────────────
 
 def _make_block_axes(fig, left, bottom, width, height):
-    """A clean axes inside the figure for legend symbols (no spines, lim 0-1)."""
+    """Sub-axes limpio (sin spines, lim 0-1) pa pintar leyenda en axes-frac."""
     ax = fig.add_axes([left, bottom, width, height])
     ax.set_xlim(0, 1); ax.set_ylim(0, 1)
     ax.set_xticks([]); ax.set_yticks([])
@@ -240,238 +135,158 @@ def _make_block_axes(fig, left, bottom, width, height):
 
 
 def _draw_footer(
-    fig: plt.Figure,
-    L: dict,
+    fig: plt.Figure, L: dict,
     passes: pd.DataFrame,
-    n_passes: int,
-    accuracy_pct: float,
-    diag_share_pct: float,
+    n_passes: int, accuracy_pct: float, diag_share_pct: float,
     attacking_right: bool,
 ):
-    """Footer = 3 horizontal blocks with widths 40 / 20 / 40 of pitch.
+    """Footer = 3 bloques 40/20/40 (mismo split que CCV PPCF).
 
-    Each block is a sub-axes so arrows can be drawn in axes coordinates
-    (FancyArrowPatch renders correctly there). Real circles inside the
-    stats block via `Ellipse(cw=2r/W, ch=2r/H)` so they stay round."""
-    from matplotlib.patches import Ellipse
-
+    block 1 (40%) — leyenda 2x2 de direction_class con conteo por tipo
+    block 2 (20%) — TOP: triangulos "Dirección de Ataque"
+                   BOT: arrow dashed con conteo de unsuccessful
+    block 3 (40%) — 3 mini-cells: passes, accuracy (diana), diagonal share
+    """
     W, H = fig.get_size_inches()
+    fl, fw = L["left"], L["width"]
+    fb, fh = L["footer"][1], L["footer"][3]
 
-    fl = L["left"]; fw = L["width"]
-    fb = L["footer"][1]
-    fh = L["footer"][3]
-
-    # 40 / 20 / 40 split
-    b1_w = fw * 0.40
-    b2_w = fw * 0.20
-    b3_w = fw * 0.40
+    b1_w, b2_w, b3_w = fw * 0.40, fw * 0.20, fw * 0.40
     ax_b1 = _make_block_axes(fig, fl, fb, b1_w, fh)
     ax_b2 = _make_block_axes(fig, fl + b1_w, fb, b2_w, fh)
     ax_b3 = _make_block_axes(fig, fl + b1_w + b2_w, fb, b3_w, fh)
 
-    # ── BLOCK 1: Pass type (2x2 cells; arrow on top, NUM + label below)
+    # ── BLOCK 1: 2x2 cells (arrow + NUM + label) ────────────────────
     counts = passes["direction_class"].value_counts().to_dict() if len(passes) else {}
     cells = [
-        # (cell_x, cell_y, key)
-        # cell_x ↑ → cell se mueve a la DERECHA      | cell_x ↓ → IZQUIERDA
-        # cell_y ↑ → texto sube (más cerca arrow)     | cell_y ↓ → texto baja
-        (0.10, 0.78, "diagonal"),   # arriba-izq
-        (0.5, 0.78, "forward"),    # arriba-der
-        (0.10, 0.32, "sideways"),   # abajo-izq
-        (0.5, 0.32, "backward"),   # abajo-der
+        (0.10, 0.78, "diagonal"),
+        (0.50, 0.78, "forward"),
+        (0.10, 0.32, "sideways"),
+        (0.50, 0.32, "backward"),
     ]
-    arrow_y_off  = 0.15  # ↑ → arrow MÁS ARRIBA respecto al texto / ↓ → arrow PEGADO al texto
-    arrow_len_ax = 0.27  # ↑ → arrow MÁS LARGA / ↓ → arrow más corta (head queda más cerca del start)
+    arrow_y_off  = 0.15
+    arrow_len_ax = 0.27
     for cell_x, cell_y, key in cells:
         color = DIRECTION_COLORS[key]
-        ax_y = cell_y + arrow_y_off            # Y final donde se dibuja el arrow (combina cell_y + offset)
-        x0 = cell_x + 0.05                     # X inicio shaft (lado izquierdo de la flecha)
-        x1 = cell_x + arrow_len_ax + 0.1       # X fin shaft (punta)
+        ax_y = cell_y + arrow_y_off
+        x0 = cell_x + 0.05
+        x1 = cell_x + arrow_len_ax + 0.10
 
-        # Shaft horizontal
-        ax_b1.plot(
-            [x0, x1], [ax_y, ax_y],
-            color=color,
-            lw=2.2,                            # ↑ → línea MÁS GORDA / ↓ más fina
-            solid_capstyle="round",
-            transform=ax_b1.transAxes, zorder=10,
-        )
-
-        # Open head `>` (dos strokes que convergen en la punta)
-        head_dx = 0.035  # ↑ → head MÁS LARGO en X (more pulled back) / ↓ head más corto
-        head_dy = 0.07   # ↑ → head MÁS ABIERTO en Y (más V) / ↓ head más cerrado (casi recto)
+        ax_b1.plot([x0, x1], [ax_y, ax_y],
+                   color=color, lw=2.2, solid_capstyle="round",
+                   transform=ax_b1.transAxes, zorder=10)
+        head_dx, head_dy = 0.035, 0.07
         for sign in (+1, -1):
-            ax_b1.plot(
-                [x1 - head_dx, x1],
-                [ax_y + sign * head_dy, ax_y],
-                color=color,
-                lw=2.2,                        # ↑ trazo head MÁS GORDO
-                solid_capstyle="round",
-                transform=ax_b1.transAxes, zorder=10,
-            )
+            ax_b1.plot([x1 - head_dx, x1],
+                       [ax_y + sign * head_dy, ax_y],
+                       color=color, lw=2.2, solid_capstyle="round",
+                       transform=ax_b1.transAxes, zorder=10)
 
-        # NUM + label en MISMA Y baseline, centrados bajo midpoint del arrow
         n_cls = int(counts.get(key, 0))
-        mid_x = cell_x + arrow_len_ax / 2.0    # punto medio horizontal del arrow shaft
-        gap   = 0.012  # ↑ → más SEPARACIÓN entre NUM y label / ↓ pegados
-        ax_b1.text(
-            mid_x - gap, cell_y, f"{n_cls}",
-            ha="right", va="center",           # NUM termina (right edge) en mid_x - gap
-            fontsize=22,                       # ↑ → NUMERO MÁS GORDO / ↓ más pequeño
-            color=WHITE, fontweight="bold",
-            fontfamily=FONT, transform=ax_b1.transAxes,
-        )
-        ax_b1.text(
-            mid_x + gap, cell_y, DIRECTION_LABELS[key],
-            ha="left", va="center",            # label empieza (left edge) en mid_x + gap
-            fontsize=12,                       # ↑ → LABEL MÁS GRANDE / ↓ más pequeño
-            color=WHITE, fontfamily=FONT,
-            transform=ax_b1.transAxes, alpha=0.95,  # alpha ↑ → MÁS BLANCO / ↓ MÁS APAGADO
-        )
+        mid_x = cell_x + arrow_len_ax / 2.0
+        gap = 0.012
+        ax_b1.text(mid_x - gap, cell_y, f"{n_cls}",
+                   ha="right", va="center", fontsize=22,
+                   color=TEXT, fontweight="bold",
+                   transform=ax_b1.transAxes)
+        ax_b1.text(mid_x + gap, cell_y, DIRECTION_LABELS[key],
+                   ha="left", va="center", fontsize=13,
+                   color=LEGEND, transform=ax_b1.transAxes)
 
-    # ── BLOCK 2: split en 2 filas — TOP: triangles + "Attacking direction"
-    # BOT: dashed arrow + N + "Unsuccessful". Misma cadencia que Block 1.
-    n_tri   = 4      # ↑ → MÁS triángulos / ↓ menos
-    tri_w   = 0.1   # ↑ → triángulo MÁS ANCHO / ↓ más estrecho
-    tri_h   = 0.16   # ↑ → triángulo MÁS ALTO / ↓ más bajo
-    spacing = 0.06   # ↑ → MÁS hueco entre triángulos / ↓ pegados
+    # ── BLOCK 2: TOP triangulos / BOT dashed arrow ──────────────────
+    n_tri, tri_w, tri_h, spacing = 4, 0.10, 0.16, 0.06
     total_w = n_tri * tri_w + (n_tri - 1) * spacing
-    start_x = (1.0 - total_w) / 2.0           # arranca centrado en el bloque
-    y_tri   = 0.9   # ↑ → triángulos SUBEN / ↓ BAJAN (tiene que coincidir con arrow Y de block 1 top)
+    start_x = (1.0 - total_w) / 2.0
+    y_tri = 0.90
     for i in range(n_tri):
         cx = start_x + i * (tri_w + spacing)
-        if attacking_right:                   # apunta a la DERECHA
+        if attacking_right:
             verts = [(cx, y_tri + tri_h / 2),
                      (cx + tri_w, y_tri),
                      (cx, y_tri - tri_h / 2)]
-        else:                                 # apunta a la IZQUIERDA
+        else:
             verts = [(cx + tri_w, y_tri + tri_h / 2),
                      (cx, y_tri),
                      (cx + tri_w, y_tri - tri_h / 2)]
-        alpha = 0.32 + i * 0.18               # ↑ base / step → triángulos MÁS OPACOS
+        alpha = 0.32 + i * 0.18
         ax_b2.add_patch(mpatches.Polygon(
-            verts, closed=True, facecolor=WHITE, edgecolor="none",
-            alpha=alpha, transform=ax_b2.transAxes, zorder=10,
-        ))
-    ax_b2.text(
-        0.5,                                  # X centro horizontal
-        0.725,                                 # ↑ → "Attacking direction" SUBE / ↓ BAJA
-        "Attacking direction",
-        ha="center", va="center",
-        fontsize=12,                          # ↑ texto MÁS GRANDE / ↓ más pequeño
-        color=WHITE, fontfamily=FONT,
-        transform=ax_b2.transAxes,
-        alpha=0.95,                           # ↑ MÁS BLANCO / ↓ APAGADO
-    )
+            verts, closed=True, facecolor=TEXT, edgecolor="none",
+            alpha=alpha, transform=ax_b2.transAxes, zorder=10))
+    ax_b2.text(0.5, 0.725, "Attacking Direction",
+               ha="center", va="center", fontsize=13,
+               color=LEGEND, transform=ax_b2.transAxes,
+               fontweight="bold")
 
-    # Fila inferior: arrow dashed + NUM + "Unsuccessful"
     n_failed = int((~passes["successful"]).sum()) if len(passes) else 0
-    cy_bot = 0.32   # ↑ → texto SUBE / ↓ BAJA (debe coincidir con cell_y bot de block 1)
-    ay_bot = cy_bot + arrow_y_off              # arrow Y = texto Y + offset (mismo offset que block 1)
-    x0 = 0.15                                  # ↑ → toda la fila se desplaza a la DERECHA / ↓ IZQ
-    x1 = x0 + arrow_len_ax + 0.45                     # punta del arrow (mismo length que block 1)
-
-    # Dashed shaft
-    ax_b2.plot(
-        [x0, x1], [ay_bot, ay_bot],
-        color=WHITE,
-        lw=2.2,                                # ↑ trazo MÁS GORDO
-        linestyle=(0, (4, 2)),                 # patrón dash → (3 on, 2 off). ↑ "on" → guiones MÁS LARGOS / ↑ "off" → más SEPARADOS
-        solid_capstyle="round",
-        transform=ax_b2.transAxes, zorder=10,
-    )
-    # Open `>` head — usa los MISMOS head_dx / head_dy del Block 1
+    cy_bot = 0.32
+    ay_bot = cy_bot + arrow_y_off
+    x0 = 0.15
+    x1 = x0 + arrow_len_ax + 0.45
+    ax_b2.plot([x0, x1], [ay_bot, ay_bot],
+               color=TEXT, lw=2.2, linestyle=(0, (4, 2)),
+               solid_capstyle="round",
+               transform=ax_b2.transAxes, zorder=10)
+    head_dx, head_dy = 0.035, 0.07
     for sign in (+1, -1):
-        ax_b2.plot(
-            [x1 - head_dx, x1],
-            [ay_bot + sign * head_dy, ay_bot],
-            color=WHITE, lw=2.2, solid_capstyle="round",
-            transform=ax_b2.transAxes, zorder=10,
-        )
-
-    # NUM + label centered under arrow midpoint (igual rhythm que block 1)
+        ax_b2.plot([x1 - head_dx, x1],
+                   [ay_bot + sign * head_dy, ay_bot],
+                   color=TEXT, lw=2.2, solid_capstyle="round",
+                   transform=ax_b2.transAxes, zorder=10)
     mid_x_b2 = -0.01 + x0 + arrow_len_ax / 2.0
-    gap_b2   = 0.012   # ↑ MÁS SEPARACIÓN NUM↔label / ↓ pegados
-    ax_b2.text(
-        mid_x_b2 - gap_b2, cy_bot, f"{n_failed}",
-        ha="right", va="center",
-        fontsize=22,                           # ↑ NUMERO MÁS GORDO
-        color=WHITE, fontweight="bold",
-        fontfamily=FONT, transform=ax_b2.transAxes,
-    )
-    ax_b2.text(
-        mid_x_b2 + gap_b2, cy_bot, "Unsuccessful",
-        ha="left", va="center",
-        fontsize=12,                           # ↑ label MÁS GRANDE (cuidado — bloque B2 estrecho, puede salirse)
-        color=WHITE, fontfamily=FONT,
-        transform=ax_b2.transAxes, alpha=0.95,
-    )
+    gap_b2 = 0.012
+    ax_b2.text(mid_x_b2 - gap_b2, cy_bot, f"{n_failed}",
+               ha="right", va="center", fontsize=22,
+               color=TEXT, fontweight="bold",
+               transform=ax_b2.transAxes)
+    ax_b2.text(mid_x_b2 + gap_b2, cy_bot, "Unsuccessful",
+               ha="left", va="center", fontsize=13,
+               color=LEGEND, transform=ax_b2.transAxes)
 
-    # ── BLOCK 3: Stats — 3 cells (passes / accuracy-dartboard / diagonal).
-    # Círculos en FIGURE coords (Ellipse cw,ch) → permanecen REDONDOS
-    # independientemente del aspect del axis.
+    # ── BLOCK 3: 3 mini-cells stats ─────────────────────────────────
     tfig = fig.transFigure
-    CIRCLE_R_IN = 0.34   # ↑ → CÍRCULOS MÁS GRANDES (en pulgadas) / ↓ más pequeños
-    cw = 2 * CIRCLE_R_IN / W                   # ancho círculo en figure-frac (no tocar — derivado)
-    ch = 2 * CIRCLE_R_IN / H                   # alto  círculo en figure-frac (no tocar — derivado)
+    CIRCLE_R_IN = 0.32
+    cw = 2 * CIRCLE_R_IN / W
+    ch = 2 * CIRCLE_R_IN / H
 
-    # Posiciones X de cada cell dentro del block 3 (b3_l..b3_l+b3_w)
     b3_l = fl + b1_w + b2_w
-    cx_pass = b3_l + b3_w * 0.18   # ↑ → "passes" se mueve a la DERECHA / ↓ a la IZQ
-    cx_acc  = b3_l + b3_w * 0.50   # ↑ → "accuracy" a la DERECHA / ↓ a la IZQ
-    cx_diag = b3_l + b3_w * 0.82   # ↑ → "diagonal" a la DERECHA / ↓ a la IZQ
-
-    y_circle = fb + fh * 0.75      # ↑ → círculos SUBEN (más cerca borde superior) / ↓ BAJAN
-    y_label  = fb + fh * 0.4      # ↑ → labels SUBEN (más cerca círculos) / ↓ BAJAN (más cerca pie figura)
+    cx_pass = b3_l + b3_w * 0.18
+    cx_acc  = b3_l + b3_w * 0.50
+    cx_diag = b3_l + b3_w * 0.82
+    y_circle = fb + fh * 0.75
+    y_label  = fb + fh * 0.40
 
     def _outline_circle(cx, edge):
         fig.patches.append(Ellipse(
             (cx, y_circle), cw, ch, transform=tfig,
             facecolor="none", edgecolor=edge,
-            linewidth=2.0,                     # ↑ → BORDE MÁS GORDO / ↓ más fino
-            alpha=0.95, zorder=10,
-        ))
+            linewidth=2.0, alpha=0.95, zorder=10))
 
     def _dartboard(cx, n_rings=3, ring_gap=0.26):
-        """Opta-style target: anillos concéntricos rojos hacia DENTRO."""
-        ring_color = "#FF6B6B"  # cambia → otro color base de la diana (e.g. "#FFD700" para gold)
-        # n_rings  ↑ → MÁS anillos / ↓ menos
-        # ring_gap ↑ → anillos MÁS SEPARADOS hacia adentro / ↓ pegados
         for i in range(n_rings):
-            scale = 1.0 - i * ring_gap         # i=0 → ring exterior (full), i++ shrink
-            alpha = 0.55 - i * 0.13            # ↑ base → diana MÁS OPACA / ↑ step → desvanece más rápido
+            scale = 1.0 - i * ring_gap
+            alpha = 0.55 - i * 0.13
             fig.patches.append(Ellipse(
                 (cx, y_circle), cw * scale, ch * scale, transform=tfig,
-                facecolor="none", edgecolor=ring_color,
-                linewidth=3.5,                 # ↑ → ANILLOS MÁS GORDOS / ↓ más finos
-                alpha=alpha, zorder=9,
-            ))
+                facecolor="none", edgecolor=DIRECTION_COLORS["backward"],
+                linewidth=3.5, alpha=alpha, zorder=9))
 
     def _stat_cell(cx, value, label, edge_color, dartboard=False):
         if dartboard:
             _dartboard(cx)
         else:
             _outline_circle(cx, edge_color)
-        fig.text(
-            cx, y_circle, value,
-            ha="center", va="center",
-            fontsize=16,                       # ↑ → NUM/% dentro del círculo MÁS GRANDE
-            color=WHITE, fontweight="bold",
-            fontfamily=FONT, transform=tfig, zorder=12,
-        )
-        fig.text(
-            cx, y_label, label,
-            ha="center", va="center",
-            fontsize=12,                       # ↑ → label DEBAJO MÁS GRANDE
-            color=WHITE, fontfamily=FONT,
-            transform=tfig,
-            alpha=0.95,                        # ↑ MÁS BLANCO / ↓ APAGADO
-        )
+        fig.text(cx, y_circle, value,
+                 ha="center", va="center", fontsize=18,
+                 color=TEXT, fontweight="bold",
+                 transform=tfig, zorder=12)
+        fig.text(cx, y_label, label,
+                 ha="center", va="center", fontsize=13,
+                 color=LEGEND, transform=tfig)
 
-    _stat_cell(cx_pass, f"{n_passes}", "passes", WHITE)
-    _stat_cell(cx_acc, f"{accuracy_pct:.0f}%", "accuracy", WHITE,
+    _stat_cell(cx_pass, f"{n_passes}", "Passes", TEXT)
+    _stat_cell(cx_acc,  f"{accuracy_pct:.0f}%", "Accuracy", TEXT,
                dartboard=True)
-    _stat_cell(cx_diag, f"{diag_share_pct:.0f}%", "diagonal",
+    _stat_cell(cx_diag, f"{diag_share_pct:.0f}%", "Diagonal",
                DIRECTION_COLORS["diagonal"])
 
 
@@ -480,29 +295,30 @@ def _draw_footer(
 def plot_player_passes(
     passes: pd.DataFrame,
     title: str,
-    subtitle: str,
+    subtitle,
     attacking_right: bool = True,
     team_logo_path: Optional[str] = None,
-    project_logo_path: Optional[str] = None,
+    project_logo_path: Optional[str] = None,   # ignorado: el JO va en draw_header
     save_path: Optional[str] = None,
     figsize: tuple = FIGSIZE,
 ) -> plt.Figure:
-    """Render a player-passes figure in the project style.
+    """Render a player-passes figure en identidad LIGHT OPTA / CCV.
 
-    Layout: header, pitch and 3-block footer all anchored to the exact
-    horizontal extent of the pitch (no overflow into the figure margins).
+    Layout: header (escudo IZQ + titulo + sub + JO DCHA, via draw_header)
+    + pitch + footer 3 bloques. Todo anclado al ancho completo de la figura.
 
     Args:
         passes: DataFrame, one row per pass. Required columns:
             x, y, x_receiver, y_receiver, direction_class, successful.
-        title: top-of-page title (e.g. "Michael Olise — Passes").
-        subtitle: smaller line under title (match info).
-        attacking_right: True if the player attacked toward +x.
-        team_logo_path: Optional PNG (transparent BG) for the top-left
-            logo next to the title. Skipped if missing.
-        project_logo_path: Optional PNG for the top-right project logo.
-            Skipped if missing.
-        save_path: Optional output file. Saved at dpi=200.
+        title: titulo (Chakra Petch 700) — ej. "Michael Olise · Passes".
+        subtitle: 1 string o lista de strings (lineas adicionales bajo el
+            titulo).
+        attacking_right: True si el jugador atacaba hacia +x.
+        team_logo_path: PNG del escudo del equipo (header IZQ). Si None
+            o no existe, el header no pinta escudo (solo titulo + JO).
+        project_logo_path: ignorado en esta version — el logo JO se gestiona
+            siempre desde common.draw_header (esquina DCHA del header).
+        save_path: Optional output file. Guardado a dpi=200.
     """
     required = {"x", "y", "x_receiver", "y_receiver",
                 "direction_class", "successful"}
@@ -513,10 +329,15 @@ def plot_player_passes(
     L = _layout(figsize)
     fig = plt.figure(figsize=figsize, facecolor=BG)
 
-    ax_header = fig.add_axes(L["header"])
-    _draw_header(ax_header, title, subtitle,
-                 team_logo_path, project_logo_path)
+    # ── Header (escudo IZQ + titulo + sub + JO DCHA) ───────────────────
+    hdr_bot = L["header"][1]
+    hdr_top = hdr_bot + L["header"][3]
+    escudo = team_logo_path if (team_logo_path and Path(team_logo_path).exists()) else None
+    draw_header(fig, title=title, subtitle=subtitle,
+                escudo_path=escudo,
+                hdr_band=(hdr_bot, hdr_top))
 
+    # ── Pitch ──────────────────────────────────────────────────────────
     ax_pitch = fig.add_axes(L["pitch"])
     pitch = Pitch(**PKW)
     pitch.draw(ax=ax_pitch)
@@ -533,9 +354,7 @@ def plot_player_passes(
             successful=bool(p["successful"]),
         )
 
-    # Footer drawn directly in figure coordinates (Opta-Forum pattern):
-    # circles are real circles, labels are figure-level text, blocks are
-    # arranged across the pitch width by computing x-centres in fig coords.
+    # ── Footer ─────────────────────────────────────────────────────────
     n = int(len(passes))
     if n > 0:
         accuracy = float(passes["successful"].mean()) * 100.0

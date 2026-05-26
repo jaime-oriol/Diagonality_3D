@@ -1,45 +1,39 @@
-"""
-dos_plot — Render Diagonal Opportunity Surfaces on pitch.
+"""dos_plot — Render Diagonal Opportunity Surfaces on pitch (LIGHT OPTA).
 
-Two-layer overlay with distinct cognitive semantics:
+Dos capas con semantica cognitiva distinta:
 
-  1. VISIBLE DOS (DOS_CMAP, cold cyan→magenta): opportunities the on-ball
-     player is currently seeing or scanned within the last 2.5s.
-     Gated by `dos * scanning_memory`.
+  1. VISIBLE DOS (DOS_CMAP, cyan->purpura->magenta): oportunidades que el
+     portador esta viendo o ha escaneado en los ultimos 2.5s.
+     Gated por `dos * scanning_memory`.
 
-  2. SHADOW DOS (SHADOW_CMAP, warm amber→gold): opportunities the player
-     does NOT see but that lie ahead of the ball inside realistic pass
-     or carry range. Gated by `dos * (1 - scanning_memory) * forward_cone`.
-     A shadowpass (Hamilton manifesto) is a pass that actually lands
-     inside a gold cell.
+  2. SHADOW DOS (SHADOW_CMAP, amber->rojo): oportunidades que el portador
+     NO ve pero que estan delante del balon dentro del cono ofensivo.
+     Gated por `dos * (1 - scanning_memory) * forward_cone`.
+     Un shadowpass (Hamilton manifesto) es un pase que aterriza dentro
+     de una celda amber.
 
-Both layers use the same smoothstep visibility curve `t^2*(3-2t)` over
-absolute `[noise_floor, display_max]` bounds, so the colour scale is
-fixed across frames — no per-frame renormalization, no on/off flicker.
+Ambas capas usan smoothstep `t^2*(3-2t)` sobre `[noise_floor, display_max]`
+absolutos -> color stable cross-frame, sin parpadeo.
 
-The caller is expected to pre-process both surfaces (blur + EMA) per
-frame and pass them in. The visible layer takes `dos_surface` + a
-`scanning_memory` mask (use all-ones if the caller has already gated).
-The shadow layer is optional; pass `shadow_surface` already masked by
-`compute_forward_cone_mask` to restrict it to the on-ball player's
-offensive arc.
+El caller pre-procesa surfaces (blur + EMA) por frame y los pasa aqui.
+La capa visible recibe `dos_surface` + un `scanning_memory` (use all-ones
+si ya esta gated). La capa shadow es opcional; pasala ya enmascarada
+con `compute_forward_cone_mask` pa restringir al cono ofensivo del portador.
 """
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.patheffects as pe
 from matplotlib.patches import Wedge
 from mplsoccer import Pitch
 
 from .common import (
-    BG, WHITE, PKW, DOS_CMAP, SHADOW_CMAP,
+    BG, TEXT, PE_S, PKW, DOS_CMAP, SHADOW_CMAP,
     ATT as ATT_C, DEF as DEF_C,
-    GK as GK_C, BALL as BALL_C,
+    GK as GK_C, draw_football,
 )
 
-PE_S = [pe.withStroke(linewidth=1.5, foreground="black"), pe.Normal()]
-MS = 20
+MS = 20      # diametro de marker pa lectura sobre el campo
 
 
 def compute_forward_cone_mask(
@@ -49,13 +43,12 @@ def compute_forward_cone_mask(
     ygrid: np.ndarray,
     max_dist_m: float = 35.0,
 ) -> np.ndarray:
-    """Boolean mask (len(ygrid), len(xgrid)) of cells that:
-      - are ahead of the ball along the attacking axis
-      - lie within `max_dist_m` of the ball (realistic pass / carry range)
+    """Boolean mask (len(ygrid), len(xgrid)) de celdas que:
+      - estan delante del balon en el eje ataque
+      - estan a <= max_dist_m del balon (pase / conduccion realista)
 
-    Used to gate the shadow-DOS layer so it only appears in the on-ball
-    player's offensive arc, never in the defensive half (avoids distracting
-    low-DOS noise behind the ball).
+    Se usa pa gatear la capa shadow del DOS y restringirla al arco
+    ofensivo del portador (evita ruido de fondo en el campo defensivo).
     """
     bx, by = float(ball_xy[0]), float(ball_xy[1])
     xx, yy = np.meshgrid(xgrid, ygrid)
@@ -85,47 +78,10 @@ def plot_dos_frame(
     shadow_display_max: float = 0.025,
     shadow_alpha_max: float = 0.55,
 ) -> plt.Figure:
-    """Render one frame with DOS heatmap + players + ball.
+    """Render one frame with DOS heatmap + players + ball sobre BG blanco.
 
-    Args:
-        orientations_frame: Single-frame orientations slice.
-        attacking_team: Team ID.
-        ball_xy: Ball position (x, y) in meters.
-        attacking_right: True if attacking toward +x.
-        dos_surface: (n_grid_y, n_grid_x) DOS grid. Typically the EMA'd
-            and gaussian-blurred output of the render loop, NOT the raw
-            output of compute_dos_surface.
-        scanning_memory: (n_grid_y, n_grid_x) on-ball scanning memory in
-            [0, 1], already resampled to the DOS grid. The DOS is
-            multiplied by this mask before being mapped to color.
-        gk_jerseys: {team_id: jersey} for GK markers. Default {0:1, 1:1}.
-        alpha_max: Peak alpha for cells at `display_max` DOS.
-        title: Optional title.
-        noise_floor: Lower edge of the smoothstep visibility curve. Cells
-            with gated DOS at or below this fade to transparent smoothly
-            (no hard cliff -> no on/off flicker). Default 0.0005, tuned
-            from real Kane goal probe frames.
-        display_max: Upper edge of the smoothstep visibility curve. Cells
-            with gated DOS at or above this saturate to alpha_max. Fixed
-            across frames so the color scale is stable. Default 0.015
-            (~ P95 of gated DOS values observed at the goal sequence).
-        shadow_surface: Optional (n_grid_y, n_grid_x) surface holding the
-            "unseen but dangerous" DOS component. Should already be
-            ball-forward-cone-masked by the caller (see
-            `compute_forward_cone_mask`). If None, no shadow layer is
-            rendered. Semantics: `shadow = dos * (1 - memory) * forward_cone`,
-            i.e. diagonal opportunities the on-ball player does NOT see
-            but that lie ahead of the ball in realistic pass / carry range.
-            A Hamilton shadowpass is a pass that actually lands inside a
-            cell lit up by this layer.
-        shadow_noise_floor: Strict lower edge of the shadow smoothstep.
-            Default 0.003 = 6x the visible noise_floor, tuned to suppress
-            low-DOS noise in zones the player simply hasn't scanned yet.
-        shadow_display_max: Upper edge of the shadow smoothstep. Default
-            0.025 (~P95 of the top shadow DOS values observed).
-        shadow_alpha_max: Peak alpha for the shadow layer. Default 0.55,
-            lower than the visible layer so shadow reads clearly as
-            secondary ("what the player could exploit if he scanned").
+    Args identicos a la version dark: solo cambia la paleta (BG blanco,
+    lineas negras, edge negro en jugadores, dorsales blancos con halo).
     """
     if gk_jerseys is None:
         gk_jerseys = {0: 1, 1: 1}
@@ -141,7 +97,6 @@ def plot_dos_frame(
             f"match DOS surface shape {dos_surface.shape}"
         )
 
-    # Figure / axis
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
         fig.set_facecolor(BG)
@@ -150,11 +105,7 @@ def plot_dos_frame(
     pitch = Pitch(**PKW)
     pitch.draw(ax=ax)
 
-    # ── Gate + smoothstep visibility curve ───────────────────────────
-    # Multiply DOS by the on-ball scanning memory to keep only cells the
-    # player can see / has scanned recently. Map onto [0, 1] via a C^1
-    # smoothstep over [noise_floor, display_max] so there is no on/off
-    # cliff and the color scale is fixed cross-frame.
+    # ── Gate + smoothstep visibility curve ──────────────────────────
     dos_pos = np.clip(dos_surface, 0.0, None).astype(np.float32)
     dos_gated = dos_pos * scanning_memory.astype(np.float32)
     edge0 = float(noise_floor)
@@ -165,10 +116,7 @@ def plot_dos_frame(
     rgba = DOS_CMAP(dos_norm)
     rgba[..., 3] = dos_norm * alpha_max
 
-    # ── Shadow layer (optional) ──────────────────────────────────────
-    # Rendered UNDER the visible DOS (lower z) so visible wins in any
-    # edge-case overlap, although by construction shadow only lives where
-    # the player does NOT see + is ahead of the ball inside pass range.
+    # ── Shadow layer (opcional, bajo la visible) ────────────────────
     if shadow_surface is not None:
         sh_pos = np.clip(shadow_surface, 0.0, None).astype(np.float32)
         sh_edge0 = float(shadow_noise_floor)
@@ -191,52 +139,54 @@ def plot_dos_frame(
         zorder=1, aspect="auto",
     )
 
-    # --- Players ---
+    # ── Players ─────────────────────────────────────────────────────
     for _, p in orientations_frame.iterrows():
-        t = int(p["team"])
+        t_id = int(p["team"])
         j = int(p["jersey"])
         x, y = float(p["x"]), float(p["y"])
-        is_gk = (j == gk_jerseys.get(t, 1))
-        color = GK_C if is_gk else (ATT_C if t == attacking_team else DEF_C)
+        is_gk = (j == gk_jerseys.get(t_id, 1))
+        color = GK_C if is_gk else (ATT_C if t_id == attacking_team else DEF_C)
 
+        # Dot (edge negro pa contraste sobre fondo blanco)
         ax.plot(x, y, "o", ms=MS, color=color,
-                markeredgecolor=WHITE, markeredgewidth=1,
-                alpha=0.85, zorder=5)
+                markeredgecolor=TEXT, markeredgewidth=1.0,
+                alpha=0.95, zorder=5)
 
-        # Shoulder bar
+        # Shoulder bar (orientacion del cuerpo)
         sa = p.get("shoulder_angle", np.nan)
         if not (isinstance(sa, float) and np.isnan(sa)):
             sw = float(p.get("shoulder_width", 0.45) or 0.45) * 9
             perp_l = sa + np.pi / 2
             perp_r = sa - np.pi / 2
-            bar_color = WHITE if is_gk else color
+            # GK shoulder bar oscuro sobre dot oscuro -> usar gris medio
+            bar_color = "#555555" if is_gk else color
             ax.plot(
                 [x + (sw / 2) * np.cos(perp_l), x + (sw / 2) * np.cos(perp_r)],
                 [y + (sw / 2) * np.sin(perp_l), y + (sw / 2) * np.sin(perp_r)],
-                color=bar_color, linewidth=8, alpha=0.7, zorder=4,
+                color=bar_color, linewidth=8, alpha=0.75, zorder=4,
                 solid_capstyle="round",
             )
 
-        # Head wedge
+        # Head wedge (mirada) — gris oscuro semi-trans pa lectura sobre el heatmap
         ha = p.get("head_angle", np.nan)
         if not (isinstance(ha, float) and np.isnan(ha)):
             wedge = Wedge(
                 (x, y), 3.5,
                 np.degrees(ha) - 22.5,
                 np.degrees(ha) + 22.5,
-                color=WHITE, alpha=0.45, zorder=3,
+                color="#333333", alpha=0.30, zorder=3,
             )
             ax.add_patch(wedge)
 
-        # Jersey number
-        ax.text(x, y, str(j), color=WHITE, fontsize=8,
+        # Jersey number — blanco con halo negro (PE_S) pa contraste maximo
+        ax.text(x, y, str(j), color="white", fontsize=8,
                 ha="center", va="center", fontweight="bold", zorder=6,
                 path_effects=PE_S)
 
-    # --- Velocity arrows ---
+    # ── Velocity arrows ─────────────────────────────────────────────
     if "vx" in orientations_frame.columns and "vy" in orientations_frame.columns:
         for team_id, team_color in [(attacking_team, ATT_C),
-                                     (1 - attacking_team, DEF_C)]:
+                                    (1 - attacking_team, DEF_C)]:
             tdf = orientations_frame[orientations_frame["team"] == team_id]
             valid = tdf.dropna(subset=["vx", "vy"])
             if not valid.empty:
@@ -245,16 +195,15 @@ def plot_dos_frame(
                     valid["vx"].values, valid["vy"].values,
                     color=team_color, scale=120, scale_units="width",
                     width=0.003, headwidth=3.5, headlength=4,
-                    headaxislength=3.5, alpha=0.55, zorder=3,
+                    headaxislength=3.5, alpha=0.7, zorder=3,
                 )
 
-    # --- Ball ---
+    # ── Ball (Telstar pattern, mismo render que la leyenda) ─────────
     if ball_xy is not None and not (np.isnan(ball_xy[0]) or np.isnan(ball_xy[1])):
-        ax.plot(ball_xy[0], ball_xy[1], "o", ms=10, color=BALL_C,
-                markeredgecolor="black", markeredgewidth=0.8, zorder=10)
+        draw_football(ax, ball_xy[0], ball_xy[1], r=0.9, zorder=10)
 
     if title:
-        ax.set_title(title, color=WHITE, fontsize=14, fontweight="bold", pad=12)
+        ax.set_title(title, color=TEXT, fontsize=14, fontweight="bold", pad=12)
 
     if save_path:
         fig.savefig(save_path, dpi=400, facecolor=fig.get_facecolor(),
