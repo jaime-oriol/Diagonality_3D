@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="figures/logos/jo_logo.png" alt="JO" width="240"/>
+</p>
+
 # Diagonality: The Best of Both Worlds
 
 **AWS World Sports Innovation Cup 2026 — Challenge 2: Unlock the Power of 3D Football Data**
