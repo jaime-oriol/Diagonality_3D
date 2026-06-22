@@ -58,13 +58,13 @@ orientation) to do two things. First, we \textbf{test the article}: we
 restate its claims as a perceptual premise and three falsifiable
 hypotheses, and test the hypotheses against 6{,}923 on-ball actions with
 metrics that owe nothing to our own model.
-The claims hold: diagonal actions are Pareto-efficient on the
-progression--safety plane, they disrupt the defensive block on its lateral
-axis, and they hand the receiver a body already turned toward goal.
+The claims hold. Diagonal actions are Pareto-efficient on the
+progression--safety plane; they disrupt the defensive block on its lateral
+axis; and they hand the receiver a body already turned toward goal.
 Second, and our core contribution, we turn the validated theory into a
 tool: the \textbf{Diagonal Opportunity Surface} (DOS), a real-time,
 action-independent pitch map that fuses what the on-ball player can see,
-how the defenders are oriented, and who controls space into a single
+how the defenders are oriented and who controls space, into a single
 signal of danger: a defender's blind spot, the orientation delay in
 reaching it, and the directional benefit of arriving oblique. DOS is built
 from a per-defender vision model adapted from Bekkers, an
@@ -82,12 +82,12 @@ against whom to attack diagonally.
 
 For two decades, coaching discourse has been governed by a single
 imperative: \emph{play forward}. Progress the ball toward goal whenever
-the chance appears, and mitigate the risk of losing it with
+the chance appears. Mitigate the risk of losing it with
 counter-pressing. Its mirror image, no less dominant, is \emph{keep the
 ball}: recycle horizontally, accept that an action gains no ground, and
 trade progression for near-certain retention. It is tempting to read these
 as rival philosophies. They are not. They are the two ends of a single
-axis, \textbf{progression versus safety}, and every pass a team
+axis, \textbf{progression versus safety}. Every pass a team
 plays is, implicitly, a choice of where to sit on it. A vertical pass
 maximises progression and, with it, risk: it travels into traffic, toward
 defenders who are already facing it. A horizontal pass maximises safety
@@ -118,8 +118,8 @@ the periphery, or behind the shoulder, is read late. Whether a delivery is
 between the defender's body and the ball, and tracking data never
 recorded that angle. It had to be proxied from the velocity vector, which
 a player can violate at will simply by running one way while facing
-another; the proxy carries $30$--$50^\circ$ of error \citep{arbues2020},
-enough to drown the signal. \citet{bekkers2026} reduced the error to
+another; the proxy carries $30$--$50^\circ$ of error \citep{arbues2020}.
+Enough to drown the signal. \citet{bekkers2026} reduced the error to
 $\sim$27$^\circ$ with broadcast pose estimation. We remove it: TRACAB
 optical 3D skeleton tracking records the real head, shoulder and hip
 keypoints of every player at 50\,Hz.
@@ -168,8 +168,8 @@ formulation of space, later generalised by the SoccerMap deep
 architecture \citep{fernandez2020soccermap}. Every model in this lineage
 shares one blind spot: a player is a disc or an isotropic Gaussian, equally
 fast and equally aware in all directions. None encodes which way the
-player is facing, and so none can express the central fact of diagonality:
-that a defender controls the space in front of them far better than
+player is facing. None can express the central fact of diagonality:
+a defender controls the space in front of them far better than
 the space behind their shoulder.
 
 \paragraph{Visual perception and scanning.} A separate, older tradition
@@ -178,7 +178,7 @@ that skilled players search more efficiently, with shorter fixations
 across more informative locations \citep{roca2011,vaeyens2007}. Carrying
 the finding onto the pitch, \citet{jordet2013} showed that visual
 exploration before receiving the ball, the habitual ``shoulder check'',
-is a hidden foundation of elite performance, and \citet{mcguckian2018}
+is a hidden foundation of elite performance; \citet{mcguckian2018}
 confirmed that exploration before possession relates directly to on-ball
 output. The field long measured this by counting \emph{visual exploratory
 actions} (rapid head turns above $125^\circ/$s), a binary, position-biased
@@ -192,7 +192,7 @@ operationalises Jordet's pre-possession exploration as a 2.5\,s memory.
 \citet{goes2019} introduced D-Def, a tracking-only measure of how much a
 pass disturbs the opposing block: the change, three seconds later, in
 its centroid, line centroids, surface area and spread. \citet{forcher2021}
-validated it on elite passing sequences, and \citet{forcher2024} showed
+validated it on elite passing sequences; \citet{forcher2024} showed
 that compactness \emph{local} to the ball, rather than whole-team
 compactness, is what matters for defensive success. We use D-Def, decomposed
 by its longitudinal and lateral components, as one of our independent
@@ -208,7 +208,7 @@ re-orienting to chase an oblique threat carries a measurable
 change-of-direction time penalty \citep{dossantos2018}. Off-ball runs,
 the third way to progress, are by now an industry product: SkillCorner's
 Game Intelligence \citep{skillcorner2024} and Stats Perform's Opta Vision
-\citep{optavision2025} both detect and classify them automatically, and
+\citep{optavision2025} both detect and classify them automatically;
 \citet{llana2022} value them against a possession model.
 
 \paragraph{The gap.} Each line is mature on its own. None has been
@@ -238,8 +238,8 @@ the input to the vision model. Shoulder facing (perpendicular to the
 shoulder axis) is where the player's reach and first step are aimed, the
 input to pitch control. Hip facing (perpendicular to the hip axis) carries
 the player's momentum. A defender can have hips square to their own goal,
-shoulders half-turned, and eyes checking a runner over the far shoulder
-all at once; only 3D skeleton data separates the three. Player position is
+shoulders half-turned, eyes checking a runner over the far shoulder
+all at once. Only 3D skeleton data separates the three. Player position is
 the pelvis keypoint. This is the decisive advantage over prior work:
 orientation is \emph{measured}, not estimated from broadcast video
 ($\sim$27$^\circ$ error) or proxied from velocity ($30$--$50^\circ$).
@@ -299,7 +299,7 @@ might have to come prior to your information'' \citep{spielverlagerung2025}.
 A horizontal pass stays in front of the defender; eyes and body track it
 together. A vertical pass travels straight at the defender and naturally
 engages them. A diagonal pass does neither. It crosses the defender's line
-of sight at an angle, forcing a choice between turning to follow it and
+of sight at an angle. That forces a choice between turning to follow it and
 holding to cover the space behind, a choice that, because the
 information arrives in the slow periphery, must often be made before it is
 fully resolved.
@@ -334,7 +334,7 @@ at once'', and ``a diagonal movement usually disturbs the opposition
 horizontally and vertically'' \citep{spielverlagerung2025}. Because a
 diagonal carries, in the article's words, ``two tactical instructions:
 advance and shift'', the defence cannot answer it by sliding or by
-dropping alone; it must do both, and doing both forces either a role
+dropping alone; it must do both. Doing both forces either a role
 exchange between defenders or a collective retreat. \textbf{Prediction:}
 when defensive disruption is decomposed into a longitudinal and a lateral
 component, diagonal actions register on both, and carry the highest
@@ -401,13 +401,13 @@ progression--safety plane, with the mean expected-threat gain of the class
 on one axis and the share of the class that retains possession on the
 other. The geometry is exactly the one the essay describes. Forward
 actions sit at the progression pole: they generate the most
-expected-threat gain, and they retain the ball the least, the vertical
+expected-threat gain, yet they retain the ball the least, the vertical
 pass that, in the article's phrase, gets you ``killed or crowned''.
 Sideways actions sit at the opposite pole: they retain possession almost
-without exception, and their mean expected-threat change is
+without exception. Their mean expected-threat change is
 \emph{negative}: motion without progress, safe but sterile.
 
-Diagonal actions are neither pole, and that is the point. They retain the
+Diagonal actions are neither pole. That is the point. They retain the
 ball far more often than forward actions, sacrifice only a little of the
 expected-threat gain, and (the decisive number) produce a
 value-positive outcome in 79\% of cases, the highest of the three classes
@@ -430,8 +430,8 @@ around ``(assumed)'' can be removed. \textbf{H4 holds.}
 \subsection{Bi-axial disruption: the defender (H2)}
 \label{sec:res-defender}
 
-Why can the diagonal cheat a trade-off? The defensive side of the answer
-is in Figure~\ref{fig:ddef}, which decomposes D-Def (measured three
+Why can the diagonal cheat a trade-off? The defensive side of the story
+sits in Figure~\ref{fig:ddef}, which decomposes D-Def (measured three
 seconds after the action) into its longitudinal component (PC1, the
 stretching and breaking of depth) and its lateral component (PC2, the
 stretching of width).
@@ -441,7 +441,7 @@ actions do not dominate every axis: forward actions, which drive straight
 into the block, disturb the longitudinal axis just as much. What
 distinguishes the diagonal is the \emph{lateral} axis. Its PC2 disruption
 is significantly higher than forward's ($p=7.0\times10^{-12}$), the
-diagonal is, specifically, the lateral-disruption specialist, and its
+diagonal is, specifically, the lateral-disruption specialist; its
 \emph{combined} PC1$+$PC2 disruption is the highest of the three classes
 ($p=2\times10^{-4}$). A vertical pass tests the line a defence is built to
 hold; a diagonal tests that line \emph{and} the one beside it, exactly the
@@ -460,15 +460,15 @@ two-axis demand the essay describes. \textbf{H2 holds.}
 \subsection{The receiver's advantage (H3)}
 \label{sec:res-receiver}
 
-The attacking side of the answer is perceptual (Fig.~\ref{fig:receiver}).
+The attacking side of the story is perceptual (Fig.~\ref{fig:receiver}).
 We read, from the skeleton, two things about the receiver at the instant
 the ball arrives: how far they still have to rotate their head to face
-goal, and how many team-mates fall inside their 120$^\circ$ binocular
+goal and how many team-mates fall inside their 120$^\circ$ binocular
 cone.
 
 Both confirm the essay. The receiver of a diagonal pass needs a mean
 rotation of 108$^\circ$ to face goal, against 145$^\circ$ for a forward
-pass, a difference of nearly forty degrees, statistically overwhelming
+pass. The difference of nearly forty degrees is statistically overwhelming
 ($p=1.6\times10^{-59}$) and large in effect. And the diagonal receiver
 sees more: 6.0 team-mates inside the binocular cone against 5.0 for a
 forward pass ($p=6.7\times10^{-11}$). The diagonal receiver, in
@@ -487,7 +487,7 @@ the goal and the ball in one frame, the next options already visible.
 \end{figure}
 
 \paragraph{The article holds.} Across three independent tests (a
-trade-off geometry, a defensive-disruption decomposition, and a
+trade-off geometry, a defensive-disruption decomposition, a
 perceptual reading of the receiver) the data confirms Spielverlagerung.
 Diagonality is not folklore. That settles \emph{whether} the diagonal
 works. It does not tell a coach \emph{where} on the pitch, against
@@ -513,7 +513,7 @@ those two diverge for a defender facing the wrong way
 (Sec.~\ref{sec:dosdef}); and then add a fourth, cognitive layer
 (Sec.~\ref{sec:gate}) that restricts the map to what the player on the
 ball can actually perceive, turning a god-eye statistic into a real-time
-decision aid. DOS is \emph{action-independent}: the same routine scores a
+decision aid. DOS is \emph{action-independent}. The same routine scores a
 pass, a carry, a take-on or an off-ball run, because all four reduce to an
 origin and a direction. Figure~\ref{fig:pipeline} shows the pipeline end
 to end.
@@ -533,7 +533,7 @@ to end.
 \subsection{What the player sees: the vision model}
 \label{sec:vision}
 
-The first layer answers, for every player and every point on the pitch,
+The vision layer answers, for every player and every point on the pitch,
 \emph{can this player see that point}. We adapt the probabilistic vision
 model of \citet{bekkers2026} to TRACAB metres. The visible region is a
 120$^\circ$ cone around the measured head yaw (the binocular field)
@@ -542,8 +542,8 @@ are harder to localise, and angularly, because acuity falls from fovea to
 periphery. Both decays are modulated by the player's speed: a sprinting
 player loses peripheral awareness and the cone narrows, a stationary
 player's cone is wide. On top of the cone we compute occlusion. Every
-other player on the pitch casts an angular shadow, and the width of that
-shadow is derived from that player's \emph{real} shoulder width from the
+other player on the pitch casts an angular shadow. Its width is derived
+from that player's \emph{real} shoulder width from the
 skeleton (a player side-on occludes little, a player square-on occludes
 a torso), where \citet{bekkers2026} used a single fixed width for
 everyone. The output is a per-player grid $V_i(x,y)\in[0,1]$: the
@@ -565,7 +565,7 @@ Figure~\ref{fig:vision} shows one frame.
 \subsection{What the player can reach: orientation-aware pitch control}
 \label{sec:ppcf}
 
-The second layer answers \emph{can this player get to that point in time
+The pitch-control layer answers \emph{can this player get to that point in time
 to matter}. Standard pitch control asks who reaches a cell first and
 treats every player as equally quick in every direction. That is exactly
 the assumption diagonality violates. We replace it: each player is an
@@ -576,8 +576,8 @@ For player $i$ and target cell $x$, let $\theta_i(x)$ be the unsigned
 angle between the player's measured shoulder facing and the direction from
 the player to the cell: zero if the cell is straight ahead, $\pi$ if it
 is directly behind. Reaching a cell behind you costs time, and the time
-has two parts, both taken from biomechanics. The first is reaction time,
-which rises with eccentricity \citep{vater2024}; the second is the
+has two parts, both taken from biomechanics: a reaction time that
+rises with eccentricity \citep{vater2024}, plus the
 change-of-direction penalty of physically turning the body
 \citep{dossantos2018}:
 \begin{align}
@@ -604,7 +604,7 @@ influence Gaussian:
 \end{equation}
 The consequence is the model's whole point. A defender facing a cell keeps
 a full-width blob over it; a defender with the same cell behind their
-shoulder has a blob compressed to half-width: a literal hole in their
+shoulder has a blob compressed to half-width. A literal hole in their
 control field, in the place the diagonality theory says the hole should
 be. Per-team influences are summed, $I_\mathrm{att} =
 \sum_{i\in\mathrm{att}}\mathrm{infl}_i$ and $I_\mathrm{def}$ likewise, and
@@ -638,8 +638,8 @@ straight:
                     - \max_{d\,\in\,\text{fwd}}\mathrm{ppcf}_\mathrm{att}^{(d)}(x,y).
 \end{equation}
 The difference is driven by H1. A defender who cannot see the threat
-reacts late, and a late reaction (through the delay term of
-Sec.~\ref{sec:ppcf}) shrinks their reach blob. We score that blindness
+reacts late. A late reaction, through the delay term of
+Sec.~\ref{sec:ppcf}, shrinks their reach blob. We score that blindness
 explicitly. For each defender, awareness combines two vision signals, read
 off the grid of Sec.~\ref{sec:vision}: whether the defender can see the
 attacker, and whether they can see the ball.
@@ -661,7 +661,7 @@ delay,
 which feeds back into the reach field. Where defenders are blind their
 blobs collapse and DOS lights up. A high-DOS cell is therefore not a black
 box: it decomposes into three readable ingredients (a defender
-\emph{blind spot}, an \emph{orientation delay} in reaching it, and the
+\emph{blind spot}, an \emph{orientation delay} in reaching it, then the
 \emph{directional benefit} of arriving oblique), the exact three causes
 the tactical theory names. Figure~\ref{fig:dos} shows DOS for the same
 frame as Figs.~\ref{fig:vision}--\ref{fig:ppcf}, rendered as the real-time
@@ -690,10 +690,10 @@ ball, have left unguarded behind their shoulders.
 \label{sec:gate}
 
 A god-eye DOS surface is true but not yet actionable. A player cannot
-exploit an opportunity they have not perceived, and the scanning
+exploit an opportunity they have not perceived. The scanning
 literature is unambiguous that what a player has \emph{looked at} recently
-governs what they can use \citep{jordet2013,mcguckian2018}. The fourth
-layer enforces this.
+governs what they can use \citep{jordet2013,mcguckian2018}. This fourth,
+cognitive layer enforces it.
 
 A frame-exact possession timeline (carries and passes linked to their
 receptions through the \texttt{play\_id} field) identifies the on-ball
@@ -712,7 +712,7 @@ information is still fresh. The \textbf{shadow layer}, amber-to-gold, is
 its exact complement (DOS weighted by one minus the scanning memory),
 restricted to the cells that lie ahead of the ball in the attacking arc
 and within realistic delivery range. A cell turns amber precisely when the
-owner is \emph{not} currently seeing it, and that covers two cases. He may
+owner is \emph{not} currently seeing it. That covers two cases. He may
 never have scanned it; or (the case worth naming) he \emph{did} scan
 it earlier, but the look is now older than the 2.5\,s window and the
 recency decay has emptied the memory. The opportunity is still on the
@@ -725,7 +725,7 @@ owner re-scans a shadowed zone, those cells cross from amber back to cyan.
 The result is a real-time, perception-bounded reading. Frame by frame the
 gated DOS shows which \textbf{passes} (inside the current field of view),
 \textbf{dribbles} (off a defender's mis-orientation) and \textbf{runs} the
-player can both \emph{see} and \emph{reach}, and in amber the high-value
+player can both \emph{see} and \emph{reach}, plus in amber the high-value
 options he has stopped watching and should re-check.
 
 \subsection{DOS predicts value}
@@ -741,14 +741,14 @@ It has. Across all 6{,}923 actions, those that gain expected threat carry
 significantly higher DOS than those that do not (Mann--Whitney $U$,
 $p=1.16\times10^{-25}$). The effect is strongest for carries
 (rank-biserial correlation $+0.40$, $p=1.2\times10^{-36}$), which is where
-it should be: a carry is a multi-frame trajectory, and the frame at which
+it should be. A carry is a multi-frame trajectory, and the frame at which
 its diagonal moment opens is exactly what DOS isolates. Sorting every
 action into DOS quintiles (Fig.~\ref{fig:quintiles}), the rate of
 value-positive outcomes climbs monotonically from 43\% in the lowest
 quintile to 61\% in the highest, a clean dose--response with no
 reversal. And the relationship is not a proxy for the obvious: in a
 logistic regression that controls for pass distance, pressure on the
-passer, and the number of defenders in the lane and goal-side, the DOS
+passer and the number of defenders in the lane and goal-side, the DOS
 coefficient remains large and significant ($+10.9$,
 $p=2.6\times10^{-5}$). DOS measures something that distance, pressure and
 defender counts do not.
@@ -808,8 +808,8 @@ attack them diagonally.
 same aggregation is a way to test DOS itself. Football analytics has an
 informal rule of thumb, the \emph{Messi test}: a metric that claims to
 capture a footballing quality must rank the players the eye already knows
-for that quality, or it is measuring something else. DOS passes it, and it
-passes it for the reason the tactical theory predicts. Spielverlagerung is
+for that quality, or it is measuring something else. DOS passes it. It
+passes for the reason the tactical theory predicts. Spielverlagerung is
 explicit that diagonality is not a one-off action but a disposition: ``a
 preference'', ``a cultivated bias against straight-line orthodoxy'',
 diagonality ``as a way of life''. A player who has internalised that bias
@@ -886,8 +886,8 @@ recruitment or analysis desk consumes.
 \section{Discussion}
 \label{sec:discussion}
 
-Two results deserve a second look. The first is that DOS and D-Def, the
-input and the apparent output of the same mechanism, are only weakly
+Two results deserve a second look. One concerns DOS and D-Def. The
+input and the apparent output of the same mechanism are only weakly
 (and \emph{negatively}) correlated ($\rho=-0.30$). This is not a flaw; it
 is a clarification. DOS measures a perceptual asymmetry at the instant of
 the action, the visual gap a diagonal can exploit. D-Def measures the
@@ -897,9 +897,9 @@ well-drilled defence absorbs by retreating in shape, produces little
 structural disruption, and the best defensive response to a visual
 threat is precisely an orderly collective drop, which lowers D-Def. The
 two metrics are complementary: DOS is the opportunity, D-Def is the damage
-done, and the gap between them is itself a coaching signal.
+done; the gap between them is itself a coaching signal.
 
-The second is the honest shape of H2. The diagonal is not the maximum on
+The other is the honest shape of H2. The diagonal is not the maximum on
 every axis of disruption; forward actions break depth as hard. The
 diagonal's edge is specifically lateral, and combined. This matters
 because it locates the mechanism precisely rather than overclaiming: the
@@ -912,14 +912,14 @@ possible at all.
 \section{Applications}
 \label{sec:applications}
 
-The framework is designed to be used, and four uses follow directly from
+The framework is designed to be used. Four uses follow directly from
 it. \textbf{Match preparation:} DOS aggregated per opponent over several
 matches is a map of that team's orientation vulnerabilities: which
 zones, and which named defenders, habitually leave space behind the
 shoulder, and therefore where a diagonal game plan should be aimed.
 \textbf{Post-match analysis:} every pass, carry, take-on and run is
 annotated with its DOS, the defender misalignment it met and the detection
-delay it exploited, which turns the vague instruction ``play more
+delay it exploited. That turns the vague instruction ``play more
 diagonals'' into a filterable, audited behaviour: the analyst can
 retrieve every diagonal opportunity that was created and every one that
 was missed. \textbf{Recruitment:} players are profiled by how much DOS
@@ -994,8 +994,8 @@ unquantified for a concrete reason: it is a claim about body orientation,
 and tracking data never recorded body orientation. With 3D skeleton
 tracking we did two things with it. We \emph{tested} it, and on five
 Bundesliga matches the article's claims hold: the diagonal is the
-efficient optimum of the progression--safety trade-off, it disrupts the
-defensive block on the lateral axis a vertical pass leaves untouched, and
+efficient optimum of the progression--safety trade-off; it disrupts the
+defensive block on the lateral axis a vertical pass leaves untouched; and
 it hands the receiver a body already turned to play. And we
 \emph{operationalised} it: the Diagonal Opportunity Surface turns the
 validated theory into an actionable, real-time, per-opponent map of where

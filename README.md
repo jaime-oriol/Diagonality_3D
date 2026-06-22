@@ -4,12 +4,12 @@
 
 # Diagonality: The Best of Both Worlds
 
-**AWS World Sports Innovation Cup 2026 — Challenge 2: Unlock the Power of 3D Football Data**
+**AWS World Sports Innovation Cup 2026, Challenge 2: Unlock the Power of 3D Football Data**
 
 A framework that uses TRACAB 3D skeleton data to measure the real body
 orientation of every player, validates Spielverlagerung's tactical theory
 of *diagonality* against the data, and turns it into the **Diagonal
-Opportunity Surface (DOS)** — a real-time, orientation-aware pitch map of
+Opportunity Surface (DOS)**: a real-time, orientation-aware pitch map of
 where a diagonal pass, carry, take-on or off-ball run breaks a defender
 who cannot see it.
 
@@ -19,7 +19,7 @@ source [`main.tex`](deliverable/main.tex) (a readable Markdown render is
 in [`main.md`](deliverable/main.md)). The PR/FAQ and the executive
 summary are in [`submission/`](submission/).
 
----
+***
 
 ## Research question
 
@@ -27,13 +27,13 @@ Do diagonal actions systematically exploit defenders' visual blind spots
 more than orthogonal ones, and can that mechanism be turned into a
 real-time, coach-facing tool?
 
-The framework operates in four orientation-aware stages — a per-defender
+The framework operates in four orientation-aware stages (a per-defender
 vision model, an Orientation-Aware Pitch Control Function, the DOS
-surface, and a cognitive scanning gate — and is validated against 6,923
+surface, and a cognitive scanning gate) and is validated against 6,923
 on-ball actions and 2,354 off-ball runs from five Bundesliga 2025-26
 matches.
 
----
+***
 
 ## TOP Renders
 
@@ -45,22 +45,22 @@ The full 35-second window of Bayern's fifth goal, rendered with the
 LIGHT OPTA palette and the Telstar ball. Each poster is the static
 frame at 14.92 s of its MP4; click the image for the full 50 fps video.
 
-**Stage 1 · Vision** — Bekkers FOV cone per defender + Kane scanning.
+**Stage 1 · Vision.** Bekkers FOV cone per defender + Kane scanning.
 
 ![Vision render](results/renders/vision_kane_goal5.gif)
 
-**Stage 2 · Orientation-Aware Pitch Control** — reach field with the blind-side gap visible.
+**Stage 2 · Orientation-Aware Pitch Control.** Reach field with the blind-side gap visible.
 
 ![PPCF render](results/renders/ppcf_kane_goal5.gif)
 
-**Stage 3 · Diagonal Opportunity Surface** — DOS with the shadow layer over the on-ball player's forward cone.
+**Stage 3 · Diagonal Opportunity Surface.** DOS with the shadow layer over the on-ball player's forward cone.
 
 ![DOS render](results/renders/dos_kane_goal5.gif)
 
 > Full-quality MP4s (50 fps, 35 s, ~10 MB each) live in
 > [`results/renders/`](results/renders/) and embedded in the executive PPTX.
 
----
+***
 
 ## Repository structure
 
@@ -129,8 +129,8 @@ Diagonality_3D/
 │   ├── logos/                    # Project + team logos
 │   └── videos/                   # Hero MP4s (Vision / PPCF / DOS)
 │
-├── data/                         # Git-ignored — hackathon data NOT uploaded
-└── outputs/                      # Git-ignored — local run artefacts
+├── data/                         # Git-ignored: hackathon data NOT uploaded
+└── outputs/                      # Git-ignored: local run artefacts
 ```
 
 **Per the challenge rules, no hackathon data is uploaded to this
@@ -141,38 +141,38 @@ in the repository, alongside its LaTeX source and the Markdown render
 `deliverable/main.md`. All versioned artefacts are reproducible from the
 steps below.
 
----
+***
 
 ## How it works
 
-**Stage 1 — Vision.** From 3D skeleton keypoints (head, shoulders, hips),
+**Stage 1: Vision.** From 3D skeleton keypoints (head, shoulders, hips),
 compute the real orientation of every player at 50 Hz and a per-defender
 probabilistic field of view, adapted from Bekkers (SSAC 2026): a 120°
 cone with speed-dependent decay and torso occlusion from real shoulder
 widths.
 
-**Stage 2 — Orientation-Aware Pitch Control.** Each player is an
+**Stage 2: Orientation-Aware Pitch Control.** Each player is an
 anisotropic Gaussian reach field whose width follows an orientation-aware
-biomechanical delay — Vater (2024) reaction time + Dos'Santos (2018)
+biomechanical delay: Vater (2024) reaction time + Dos'Santos (2018)
 change-of-direction penalty applied to the real shoulder angle. A defender
 with the threat in their blind spot has a hole in their control field.
 
-**Stage 3 — Diagonal Opportunity Surface.** For every cell, DOS is the
+**Stage 3: Diagonal Opportunity Surface.** For every cell, DOS is the
 extra attacker control bought by the best diagonal delivery over the best
 orthogonal one. Defenders who cannot see the threat suffer an extra
 detection delay that shrinks their reach. DOS scores passes, carries,
 take-ons and off-ball runs with one action-independent routine.
 
-**Stage 4 — Cognitive scanning gate.** A frame-exact possession timeline
+**Stage 4: Cognitive scanning gate.** A frame-exact possession timeline
 identifies the on-ball player; DOS is gated by their field of view plus a
 2.5 s exponentially-decayed scanning memory, so the surface only shows
 what the player can actually perceive and act on.
 
 The empirical validation is causally fair: the DOS model receives no xG,
-no xT and no outcome labels — only geometry, the vision model and skeleton
-orientation — so it is cross-checked against outcomes it never saw.
+no xT and no outcome labels (only geometry, the vision model and skeleton
+orientation), so it is cross-checked against outcomes it never saw.
 
----
+***
 
 ## Setup
 
@@ -188,7 +188,7 @@ scipy 1.15.2, scikit-learn 1.7.2, statsmodels 0.14.5, matplotlib 3.10.8,
 mplsoccer 1.6.1, pyarrow 23.0.0, Pillow 12.0.0; `pytest` for the test
 suite and `python-pptx` for the executive-summary slides).
 
----
+***
 
 ## Reproducing the results
 
@@ -197,11 +197,11 @@ With the hackathon data placed under `data/hackathon/`, the full pipeline
 runs from the repository root, in this order:
 
 ```bash
-# 1. Cache — extract event-linked skeleton windows, per match
+# 1. Cache: extract event-linked skeleton windows, per match
 python3 -m src.preprocess <MATCH>          # one match, or:
 python3 pipeline/regenerate_caches.py      # all five matches
 
-# 2. Metric chain — DOS over every action, then enrichment
+# 2. Metric chain: DOS over every action, then enrichment
 python3 pipeline/validate_dos_outcomes.py
 python3 pipeline/fix_carry_possession_link.py
 python3 pipeline/enrich_with_xt.py
@@ -209,7 +209,7 @@ python3 pipeline/enrich_with_ddef.py
 python3 pipeline/enrich_with_theta.py
 python3 pipeline/enrich_full_metadata.py
 
-# 3. Off-ball runs — detection + DOS
+# 3. Off-ball runs: detection + DOS
 python3 pipeline/detect_runs.py
 
 # 4. Statistics, aggregation and the narrative index
@@ -258,7 +258,7 @@ cd deliverable && tectonic main.tex      # or compile main.tex on Overleaf
 
 The PR/FAQ compiles the same way (`tectonic prfaq.tex`).
 
----
+***
 
 ## Submission notes
 
@@ -271,18 +271,18 @@ The PR/FAQ compiles the same way (`tectonic prfaq.tex`).
 - The submission artefacts (executive summary, PR/FAQ, repository link)
   are collected in [`submission/`](submission/).
 
----
+***
 
 ## Key references
 
-- Spielverlagerung (2025) — Tactical Theory: Diagonality
-- Hamilton (2025) — The Diagonalist Manifesto
-- Bekkers (SSAC 2026) — Wide Open Gazes: vision model
-- Spearman (2017, 2018) — pitch control / Beyond Expected Goals
-- Fernández & Bornn (2018) — Wide Open Spaces
-- Goes et al. (2019), Forcher et al. (2021, 2024) — D-Def defensive disruption
-- Vater (2024) — reaction time and visual eccentricity
-- Dos'Santos et al. (2018) — change-of-direction biomechanics
-- Singh (2018) — Expected Threat
+- Spielverlagerung (2025), Tactical Theory: Diagonality
+- Hamilton (2025), The Diagonalist Manifesto
+- Bekkers (SSAC 2026), Wide Open Gazes: vision model
+- Spearman (2017, 2018), pitch control / Beyond Expected Goals
+- Fernández & Bornn (2018), Wide Open Spaces
+- Goes et al. (2019), Forcher et al. (2021, 2024): D-Def defensive disruption
+- Vater (2024), reaction time and visual eccentricity
+- Dos'Santos et al. (2018), change-of-direction biomechanics
+- Singh (2018), Expected Threat
 
 Full, verified bibliography in [`deliverable/references.bib`](deliverable/references.bib).
